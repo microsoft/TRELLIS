@@ -7,19 +7,15 @@ RUN apt-get update && \
 WORKDIR /app
 
 # Add the application files
-ADD trellis    /app/trellis
-ADD setup.sh   /app/setup.sh
-ADD headless_app.py /app/headless_app.py
-ADD example.py /app/example.py
-ADD extensions /app/extensions
-ADD assets     /app/assets
+COPY . /app/
 
 # Initialize and update git submodules
 RUN cd /app && \
     git init && \
     git submodule init && \
     git submodule update --init --recursive && \
-    git submodule update --recursive
+    git submodule update --recursive && \
+    rm -rf .git */.git **/.git  # Remove all .git directories
 
 # Setup conda and PyTorch
 RUN conda config --set always_yes true && conda init
