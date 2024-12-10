@@ -23,4 +23,11 @@ fi
 export CXX=/usr/local/bin/gxx-wrapper
 
 echo "Launching headless API server..."
-python3 headless_app.py
+# Check if headless_app.py exists in workspace and use that instead
+if [ -f "/workspace/headless_app.py" ]; then
+    echo "Using headless_app.py from workspace"
+    python3 /workspace/headless_app.py
+else
+    echo "Using built-in headless_app.py"
+    python3 headless_app.py
+fi

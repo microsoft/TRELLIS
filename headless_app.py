@@ -4,6 +4,7 @@ import torch
 import numpy as np
 import imageio
 import uuid
+import time
 from easydict import EasyDict as edict
 from PIL import Image
 from fastapi import FastAPI, UploadFile, File
@@ -11,12 +12,40 @@ from fastapi.responses import FileResponse
 from trellis.pipelines import TrellisImageTo3DPipeline
 from trellis.representations import Gaussian, MeshExtractResult
 from trellis.utils import render_utils, postprocessing_utils
+import json
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
+
 MAX_SEED = np.iinfo(np.int32).max
-TMP_DIR = "/tmp/Trellis-demo"
+TMP_DIR = "/workspace/Trellis-demo"
 os.makedirs(TMP_DIR, exist_ok=True)
+
+def cleanup_old_files(directory: str, max_age_hours: int = 24):
+    """Clean up files older than max_age_hours"""
+    current_time = time.time()
+    for filename in os.listdir(directory):
+        filepath = os.path.join(directory, filename)
+        if os.path.isfile(filepath):
+            if (current_time - os.path.getmtime(filepath)) > (max_age_hours * 3600):
+                try:
+                    os.remove(filepath)
+                except OSError:
+                    pass
+
+@app.on_event("startup")
+async def startup_event():
+    """Run cleanup on startup"""
+    cleanup_old_files(TMP_DIR)
 
 # Initialize pipeline globally
 pipeline = TrellisImageTo3DPipeline.from_pretrained("JeffreyXiang/TRELLIS-image-large")
@@ -88,6 +117,10 @@ async def process_image(
     # Pack state and return results
     state = pack_state(outputs['gaussian'][0], outputs['mesh'][0], trial_id)
     
+    # Save state file
+    with open(f"{TMP_DIR}/{trial_id}_state.json", 'w') as f:
+        json.dump(state, f)
+    
     return {
         "trial_id": trial_id,
         "state": state,
@@ -109,6 +142,10 @@ async def extract_glb(
     state_path = f"{TMP_DIR}/{trial_id}_state.json"
     if not os.path.exists(state_path):
         return {"error": "Trial ID not found"}
+    
+    # Add this line to load the state
+    with open(state_path, 'r') as f:
+        state = json.load(f)
     
     # Generate GLB
     glb_path = f"{TMP_DIR}/{trial_id}.glb"
