@@ -5,12 +5,20 @@ RUN apt-get update && \
     apt-get install -y ffmpeg build-essential htop git python3-onnx rdfind
 
 WORKDIR /app
+
+# Add the application files
 ADD trellis    /app/trellis
 ADD setup.sh   /app/setup.sh
 ADD headless_app.py /app/headless_app.py
 ADD example.py /app/example.py
 ADD extensions /app/extensions
 ADD assets     /app/assets
+
+# Initialize and update git submodules
+RUN cd /app && \
+    git init && \
+    git submodule init && \
+    git submodule update --init --recursive
 
 # Setup conda
 RUN conda config --set always_yes true && conda init
