@@ -18,15 +18,26 @@ ADD assets     /app/assets
 RUN cd /app && \
     git init && \
     git submodule init && \
-    git submodule update --init --recursive
+    git submodule update --init --recursive && \
+    git submodule update --recursive
 
-# Setup conda
+# Setup conda and PyTorch
 RUN conda config --set always_yes true && conda init
-
-# Use bash shell so we can source activate
-SHELL ["/bin/bash", "-c"]
-
 RUN conda install cuda=12.4 pytorch==2.4.0 torchvision==0.19.0 pytorch-cuda=12.4 -c pytorch -c nvidia
+
+# Install Kaolin dependencies first
+RUN conda run -n base pip install -r https://raw.githubusercontent.com/NVIDIAGameWorks/kaolin/v0.17.0/tools/build_requirements.txt \
+    -r https://raw.githubusercontent.com/NVIDIAGameWorks/kaolin/v0.17.0/tools/viz_requirements.txt \
+    -r https://raw.githubusercontent.com/NVIDIAGameWorks/kaolin/v0.17.0/tools/requirements.txt
+
+# Now install Kaolin with the correct version
+RUN conda run -n base pip install kaolin==0.17.0 -f https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.4.0_cu124.html
+
+# Install diso and other dependencies
+RUN conda run -n base pip install diso
+
+# Verify Kaolin installation
+RUN conda run -n base python -c "import kaolin; print(kaolin.__version__)"
 
 # Create a g++ wrapper for JIT, since the include dirs are passed with -i rather than -I for some reason
 RUN printf '#!/usr/bin/env bash\nexec /usr/bin/g++ -I/usr/local/cuda/include -I/usr/local/cuda/include/crt "$@"\n' > /usr/local/bin/gxx-wrapper && \
@@ -38,9 +49,7 @@ RUN conda run -n base ./setup.sh --basic --xformers --flash-attn --diffoctreeras
 
 # Now install additional Python packages
 # These ones work inside the builder
-RUN conda run -n base pip install diso
 RUN conda run -n base pip install plyfile utils3d flash_attn spconv-cu120 xformers
-RUN conda run -n base pip install kaolin -f https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.4.0_cu121.html
 RUN conda run -n base pip install git+https://github.com/NVlabs/nvdiffrast.git
 
 # Cleanup after builds are done
