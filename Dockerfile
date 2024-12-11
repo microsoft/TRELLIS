@@ -60,8 +60,9 @@ COPY --from=builder /app /app
 # Reinstall any runtime tools needed
 # git and build-essential are needed for post_install.sh script.
 # vim and strace are useful for debugging, remove those if you want to.
-RUN apt-get update && \
-    apt-get install -y build-essential \
+RUN apt update && \
+    apt upgrade && \
+    apt install -y build-essential \
                        git \
                        strace \
                        vim && \
@@ -84,5 +85,5 @@ ENV PATH=/opt/conda/bin:$PATH
 # tests, then do `docker commit` to save the models along with the image.
 # This will ensure that it won't fail at runtime due to models being
 # unavailable, or network restrictions.
-CMD ["/app/onstart.sh"]
+CMD ["bash", "/app/onstart.sh"]
 
