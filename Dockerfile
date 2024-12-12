@@ -61,7 +61,7 @@ COPY --from=builder /app /app
 # git and build-essential are needed for post_install.sh script.
 # vim and strace are useful for debugging, remove those if you want to.
 RUN apt update && \
-    apt upgrade && \
+    apt upgrade -y && \
     apt install -y build-essential \
                        git \
                        strace \
