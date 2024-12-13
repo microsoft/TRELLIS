@@ -187,7 +187,7 @@ def _fill_holes(
         if verbose:
             tqdm.write(f'Removed 0 faces by mincut')
             
-    mesh = _meshfix.PyTMesh()
+    mesh = _meshfix.PyTMesh(verbose=verbose)
     mesh.load_array(verts.cpu().numpy(), faces.cpu().numpy())
     mesh.fill_small_boundaries(nbe=max_hole_nbe, refine=True)
     verts, faces = mesh.return_arrays()
@@ -439,7 +439,7 @@ def to_glb(
     vertices, faces, uvs = parametrize_mesh(vertices, faces)
 
     # bake texture
-    observations, extrinsics, intrinsics = render_multiview(app_rep, resolution=1024, nviews=100)
+    observations, extrinsics, intrinsics = render_multiview(app_rep, resolution=1024, nviews=100, verbose=verbose)
     masks = [np.any(observation > 0, axis=-1) for observation in observations]
     extrinsics = [extrinsics[i].cpu().numpy() for i in range(len(extrinsics))]
     intrinsics = [intrinsics[i].cpu().numpy() for i in range(len(intrinsics))]
