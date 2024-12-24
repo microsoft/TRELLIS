@@ -17,6 +17,26 @@ from .render_utils import render_multiview
 from ..renderers import GaussianRenderer
 from ..representations import Strivec, Gaussian, MeshExtractResult
 
+def _rgb_to_srgb(f: torch.Tensor) -> torch.Tensor:
+    """ 
+    convert a tensor, in any form / dimension, from rgb space to srgb space 
+    Args:
+        f (torch.Tensor): input tensor
+
+    """
+    return torch.where(f <= 0.0031308, f * 12.92, torch.pow(torch.clamp(f, 0.0031308), 1.0/2.4)*1.055 - 0.055)
+
+def rgb_to_srgb_image(f: torch.Tensor) -> torch.Tensor:
+    """ 
+    convert an image tensor from rgb space to srgb space 
+    Args:
+        f (torch.Tensor): input tensor
+
+    """
+    assert f.shape[-1] == 3 or f.shape[-1] == 4
+    out = torch.cat((_rgb_to_srgb(f[..., 0:3]), f[..., 3:4]), dim=-1) if f.shape[-1] == 4 else _rgb_to_srgb(f)
+    assert out.shape[0] == f.shape[0] and out.shape[1] == f.shape[1] and out.shape[2] == f.shape[2]
+    return out
 
 @torch.no_grad()
 def _fill_holes(
@@ -151,7 +171,7 @@ def _fill_holes(
             for i, edge_cc in enumerate(cc_new_boundary_edge_cc):
                 _e1 = verts[edges[cc_new_boundary_edge_indices[edge_cc]][:, 0]] - cc_new_boundary_edges_cc_center[i]
                 _e2 = verts[edges[cc_new_boundary_edge_indices[edge_cc]][:, 1]] - cc_new_boundary_edges_cc_center[i]
-                cc_new_boundary_edges_cc_area.append(torch.norm(torch.cross(_e1, _e2, dim=-1), dim=1).sum() * 0.5)
+                cc_new_boundary_edges_cc_area.append(torch.norm(torch.cross(_e1, _e2, dim=-1), dim=1).sum().item() * 0.5)
             if debug:
                 cutting_edges.append(cc_new_boundary_edge_indices)
                 tqdm.write(f'Area of the cutting loop: {cc_new_boundary_edges_cc_area}')
@@ -169,11 +189,11 @@ def _fill_holes(
         vis_colors[remove_face_indices.cpu().numpy()] = [255, 0, 255]
         if len(valid_remove_cc) > 0:
             vis_colors[remove_face_indices[torch.cat(valid_remove_cc)].cpu().numpy()] = [255, 0, 0]
-        utils3d.io.write_ply('dbg_dual.ply', face_v, edges=vis_dual_edges, vertex_colors=vis_colors)
+        utils3d.io.write_ply('debug/dbg_dual.ply', face_v, edges=vis_dual_edges, vertex_colors=vis_colors)
         
         vis_verts = verts.cpu().numpy()
         vis_edges = edges[torch.cat(cutting_edges)].cpu().numpy()
-        utils3d.io.write_ply('dbg_cut.ply', vis_verts, edges=vis_edges)
+        utils3d.io.write_ply('debug/dbg_cut.ply', vis_verts, edges=vis_edges)
         
     
     if len(valid_remove_cc) > 0:
@@ -286,6 +306,7 @@ def bake_texture(
     far: float = 10.0,
     mode: Literal['fast', 'opt'] = 'opt',
     lambda_tv: float = 1e-2,
+    srgb_space: bool = False, 
     verbose: bool = False,
 ):
     """
@@ -337,10 +358,13 @@ def bake_texture(
         mask = texture_weights > 0
         texture[mask] /= texture_weights[mask][:, None]
         texture = np.clip(texture.reshape(texture_size, texture_size, 3).cpu().numpy() * 255, 0, 255).astype(np.uint8)
+        if srgb_space:
+            # convert the texture from rgb space to srgb 
+            texture = rgb_to_srgb_image(texture) 
 
         # inpaint
         mask = (texture_weights == 0).cpu().numpy().astype(np.uint8).reshape(texture_size, texture_size)
-        texture = cv2.inpaint(texture, mask, 3, cv2.INPAINT_TELEA)
+        texture_inpainted = cv2.inpaint(texture, mask, 3, cv2.INPAINT_TELEA)
 
     elif mode == 'opt':
         rastctx = utils3d.torch.RastContext(backend='cuda')
@@ -348,7 +372,7 @@ def bake_texture(
         masks = [m.flip(0) for m in masks]
         _uv = []
         _uv_dr = []
-        for observation, view, projection in tqdm(zip(observations, views, projections), total=len(views), disable=not verbose, desc='Texture baking (opt): UV'):
+        for observation, view, projection in tqdm(zip(observations, views, projections), total=len(views), disable=not verbose, desc='Texture baking rasterization (opt): UV'):
             with torch.no_grad():
                 rast = utils3d.torch.rasterize_triangle_faces(
                     rastctx, vertices[None], faces, observation.shape[1], observation.shape[0], uv=uvs[None], view=view, projection=projection
@@ -385,24 +409,31 @@ def bake_texture(
                 optimizer.param_groups[0]['lr'] = cosine_anealing(optimizer, step, total_steps, 1e-2, 1e-5)
                 pbar.set_postfix({'loss': loss.item()})
                 pbar.update()
+                
+        if srgb_space:
+            # convert the texture from rgb space to srgb 
+            texture = rgb_to_srgb_image(texture) 
+                    
         texture = np.clip(texture[0].flip(0).detach().cpu().numpy() * 255, 0, 255).astype(np.uint8)
         mask = 1 - utils3d.torch.rasterize_triangle_faces(
             rastctx, (uvs * 2 - 1)[None], faces, texture_size, texture_size
         )['mask'][0].detach().cpu().numpy().astype(np.uint8)
-        texture = cv2.inpaint(texture, mask, 3, cv2.INPAINT_TELEA)
+        texture_inpainted = cv2.inpaint(texture, mask, 3, cv2.INPAINT_TELEA)
     else:
         raise ValueError(f'Unknown mode: {mode}')
 
-    return texture
+    return texture, texture_inpainted
 
 
-def to_glb(
+def to_trimesh(
     app_rep: Union[Strivec, Gaussian],
     mesh: MeshExtractResult,
     simplify: float = 0.95,
     fill_holes: bool = True,
     fill_holes_max_size: float = 0.04,
     texture_size: int = 1024,
+    texture_bake_mode: Literal['fast', 'opt'] = 'opt',
+    get_srgb_texture: bool = False, 
     debug: bool = False,
     verbose: bool = True,
 ) -> trimesh.Trimesh:
@@ -419,12 +450,12 @@ def to_glb(
         debug (bool): Whether to print debug information.
         verbose (bool): Whether to print progress.
     """
-    vertices = mesh.vertices.cpu().numpy()
-    faces = mesh.faces.cpu().numpy()
+    vertices_raw = mesh.vertices.cpu().numpy()
+    faces_raw = mesh.faces.cpu().numpy()
     
     # mesh postprocess
     vertices, faces = postprocess_mesh(
-        vertices, faces,
+        vertices_raw, faces_raw,
         simplify=simplify > 0,
         simplify_ratio=simplify,
         fill_holes=fill_holes,
@@ -444,15 +475,19 @@ def to_glb(
     masks = [np.any(observation > 0, axis=-1) for observation in observations]
     extrinsics = [extrinsics[i].cpu().numpy() for i in range(len(extrinsics))]
     intrinsics = [intrinsics[i].cpu().numpy() for i in range(len(intrinsics))]
-    texture = bake_texture(
+    # texture_raw indicates the texture before inpainting 
+    texture_raw, texture = bake_texture(
         vertices, faces, uvs,
         observations, masks, extrinsics, intrinsics,
-        texture_size=texture_size, mode='opt',
+        texture_size=texture_size, mode=texture_bake_mode,
+        srgb_space=get_srgb_texture,
         lambda_tv=0.01,
         verbose=verbose
     )
+    texture_raw = Image.fromarray(texture_raw)
     texture = Image.fromarray(texture)
 
+    mesh = trimesh.Trimesh(vertices, faces, visual=trimesh.visual.TextureVisuals(uv=uvs, image=texture))
     # rotate mesh (from z-up to y-up)
     vertices = vertices @ np.array([[1, 0, 0], [0, 0, -1], [0, 1, 0]])
     material = trimesh.visual.material.PBRMaterial(
@@ -460,9 +495,20 @@ def to_glb(
         baseColorTexture=texture,
         baseColorFactor=np.array([255, 255, 255, 255], dtype=np.uint8)
     )
-    mesh = trimesh.Trimesh(vertices, faces, visual=trimesh.visual.TextureVisuals(uv=uvs, material=material))
-    return mesh
-
+    mesh_yup = trimesh.Trimesh(vertices, faces, visual=trimesh.visual.TextureVisuals(uv=uvs, material=material))
+    if debug:
+        return {
+            "mesh_raw": trimesh.Trimesh(vertices_raw, faces_raw), 
+            "mesh": mesh, 
+            "mesh_yup": mesh_yup, 
+            "texture_raw": texture_raw, 
+            "texture": texture, 
+            "observations": observations,
+            "intrinsics": intrinsics,
+            "extrinsics": extrinsics,
+        }
+    
+    return mesh_yup
 
 def simplify_gs(
     gs: Gaussian,

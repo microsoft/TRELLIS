@@ -1,3 +1,5 @@
+import os 
+import zipfile 
 import numpy as np
 import cv2
 import torch
@@ -185,3 +187,18 @@ def indent(s, n=4):
         lines[i] = ' ' * n + lines[i]
     return '\n'.join(lines)
 
+def zip_directory(directory_path, zip_file_path):
+    """
+    compress directory into a zipfile 
+    """
+    if not os.path.isdir(directory_path):
+        raise FileNotFoundError(f"Directory {directory_path} not found.")
+
+    with zipfile.ZipFile(zip_file_path, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        for root, dirs, files in os.walk(directory_path):
+            for dir_name in dirs:
+                dir_path = os.path.join(root, dir_name)
+                zip_file.write(dir_path, os.path.relpath(dir_path, directory_path))
+            for file_name in files:
+                file_path = os.path.join(root, file_name)
+                zip_file.write(file_path, os.path.relpath(file_path, directory_path))

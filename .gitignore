@@ -396,3 +396,11 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+
+# Results and server logs
+results/
+legacy/
+tmp/
+# Experiments 
+nvdiffrec/
+make_nvdiffrec_data.py

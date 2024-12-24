@@ -110,7 +110,7 @@ class Gaussian:
     def from_opacity(self, opacities):
         self._opacity = self.inverse_opacity_activation(opacities) - self.opacity_bias
 
-    def construct_list_of_attributes(self):
+    def construct_list_of_attributes(self, mode='all'):        
         l = ['x', 'y', 'z', 'nx', 'ny', 'nz']
         # All channels except the 3 DC
         for i in range(self._features_dc.shape[1]*self._features_dc.shape[2]):
@@ -121,7 +121,7 @@ class Gaussian:
         for i in range(self._rotation.shape[1]):
             l.append('rot_{}'.format(i))
         return l
-        
+
     def save_ply(self, path, transform=[[1, 0, 0], [0, 0, -1], [0, 1, 0]]):
         xyz = self.get_xyz.detach().cpu().numpy()
         normals = np.zeros_like(xyz)
