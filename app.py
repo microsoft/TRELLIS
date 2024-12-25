@@ -20,16 +20,14 @@ MAX_SEED = np.iinfo(np.int32).max
 TMP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tmp')
 os.makedirs(TMP_DIR, exist_ok=True)
 
-# pipeline = TrellisImageTo3DPipeline.from_pretrained("JeffreyXiang/TRELLIS-image-large")
-# pipeline.cuda()
 pipeline = None
 
 # Default sampling steps for SparseStructure SLAT 
 DEFAULT_SS_SAMPLE_STEPS = 12
 DEFAULT_SLAT_SAMPLE_STEPS = 12
-TEXGEN_SLAT_SAMPLE_STEPS = 25 
+DETAIL_VAR_SLAT_SAMPLE_STEPS = 25 
 
-# Voxelizer (for texture generation pipeline)
+# Voxelizer (for detail variation pipeline)
 VOXELIZER = "cuda_voxelizer"
 VOVEL_RESOLUTION = 64 
 VOXELIZER_CMD = "{} -f {} -s {} -o binvox"
@@ -201,9 +199,8 @@ def image_to_3d(
     Args:
         image (Image.Image): The input image.
         multiimages (List[Tuple[Image.Image, str]]): The input images in multi-image mode.
-        raw_mesh (str): TODO
-        is_multiimage (bool): Whether is in multi-image mode.
-        is_texgen (bool): TODO. 
+        raw_mesh (str): raw mesh (ONLY required for Detail Variation mode).
+        demo_mode (Demo): Mode of current run (SingleImageTo3D / MultiImageTo3D / DetailVariation).
         seed (int): The random seed.
         ss_guidance_strength (float): The guidance strength for sparse structure generation.
         ss_sampling_steps (int): The number of sampling steps for sparse structure generation.
@@ -251,7 +248,7 @@ def image_to_3d(
     else:
         import trimesh 
         binary_voxel = trimesh.load(voxelize_mesh(raw_mesh)).matrix 
-        outputs = pipeline.run_texgen(
+        outputs = pipeline.run_detail_variation(
             binary_voxel, 
             image,
             seed=seed, 
@@ -375,7 +372,7 @@ with gr.Blocks(delete_cache=(600, 600)) as demo:
                         
                         *NOTE: this is an experimental algorithm without training a specialized model. It may not produce the best results for all images, especially those having different poses or inconsistent details.*
                     """)
-                with gr.Tab(label="Texture Generation", id=2) as texgen_input_tab:
+                with gr.Tab(label="Detail Variation", id=2) as detail_var_input_tab:
                     with gr.Row():
                         mesh_prompt = gr.Model3D(label="Input Raw Mesh(Z-UP)", height=300, display_mode="Solid", clear_color=[1, 1, 1, 1])
                         mesh_prompt_view = gr.Model3D(label="Preview Input Mesh", height=300, display_mode="Solid", clear_color=[1, 1, 1, 1])
@@ -422,7 +419,7 @@ with gr.Blocks(delete_cache=(600, 600)) as demo:
                 download_obj = gr.DownloadButton(label="Download OBJ", interactive=False)
                 download_gs = gr.DownloadButton(label="Download Gaussian", interactive=False)  
             
-    # single_image / multi_image / texgen 
+    # single_image / multi_image / detail variation 
     demo_mode = gr.State(DemoMode.SINGLE_IMAGE)
     output_buf = gr.State()
 
@@ -448,7 +445,7 @@ with gr.Blocks(delete_cache=(600, 600)) as demo:
             run_on_click=True,
             examples_per_page=8,
         )
-    with gr.Row(visible=False) as texgen_example: 
+    with gr.Row(visible=False) as detail_var_example: 
         examples_mesh = gr.Examples(
             examples=[
                 f'assets/example_mesh/{mesh}'
@@ -481,15 +478,15 @@ with gr.Blocks(delete_cache=(600, 600)) as demo:
     
     single_image_input_tab.select(
         lambda: tuple([DemoMode.SINGLE_IMAGE, DEFAULT_SLAT_SAMPLE_STEPS, gr.Row.update(visible=True), gr.Row.update(visible=False), gr.Row.update(visible=False)]),
-        outputs=[demo_mode, slat_sampling_steps, single_image_example, multiimage_example, texgen_example]
+        outputs=[demo_mode, slat_sampling_steps, single_image_example, multiimage_example, detail_var_example]
     )
     multiimage_input_tab.select(
         lambda: tuple([DemoMode.MULTI_IMAGE, DEFAULT_SLAT_SAMPLE_STEPS, gr.Row.update(visible=False), gr.Row.update(visible=True), gr.Row.update(visible=False)]),
-        outputs=[demo_mode, slat_sampling_steps, single_image_example, multiimage_example, texgen_example]
+        outputs=[demo_mode, slat_sampling_steps, single_image_example, multiimage_example, detail_var_example]
     )
-    texgen_input_tab.select(
-        lambda: tuple([DemoMode.TEXTURE_GEN, TEXGEN_SLAT_SAMPLE_STEPS, gr.Row.update(visible=False), gr.Row.update(visible=False), gr.Row.update(visible=True)]),
-        outputs=[demo_mode, slat_sampling_steps, single_image_example, multiimage_example, texgen_example] 
+    detail_var_input_tab.select(
+        lambda: tuple([DemoMode.TEXTURE_GEN, DETAIL_VAR_SLAT_SAMPLE_STEPS, gr.Row.update(visible=False), gr.Row.update(visible=False), gr.Row.update(visible=True)]),
+        outputs=[demo_mode, slat_sampling_steps, single_image_example, multiimage_example, detail_var_example] 
     )
     
     image_prompt.upload(

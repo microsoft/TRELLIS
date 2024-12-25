@@ -269,7 +269,7 @@ class TrellisImageTo3DPipeline(Pipeline):
         return slat
     
     @torch.no_grad()
-    def run_texgen(
+    def run_detail_variation(
         self,
         binary_voxel: np.ndarray, 
         images: Union[Image.Image, List[Image.Image]],
