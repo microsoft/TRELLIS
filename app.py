@@ -35,7 +35,7 @@ VOXELIZER_CMD = "{} -f {} -s {} -o binvox"
 class DemoMode(Enum):
     SINGLE_IMAGE = 0
     MULTI_IMAGE = 1 
-    TEXTURE_GEN = 2 
+    DETAIL_VARIATION = 2 
 
 def check_voxelizer_exists(executable):
     """ Install the CUDA Voxelizer according to https://github.com/Forceflow/cuda_voxelizer.
@@ -127,7 +127,7 @@ def preprocess_mesh(inpath: str) -> str:
     # Normalize 
     colors = (vertices - vertices.min(axis=0, keepdims=True)) / (vertices.max(axis=0, keepdims=True) - vertices.min(axis=0, keepdims=True))
     colors = (colors * 255).astype(np.uint8)
-    vertices = vertices @ np.array([[1, 0, 0], [0, 0, 1], [0, -1, 0]])
+    vertices = vertices @ np.array([[1, 0, 0], [0, 0, -1], [0, 1, 0]]) @ np.array([[-1, 0., 0.], [0., 1., 0.], [0., 0., -1.]])
     newmesh = trimesh.Trimesh(vertices, inmesh.faces, visual=trimesh.visual.color.ColorVisuals(vertex_colors=colors))
     outpath = os.path.join(os.path.dirname(inpath), os.path.splitext(os.path.basename(inpath))[0] + "_colorized.obj")
     newmesh.export(outpath)
@@ -183,6 +183,7 @@ def get_seed(randomize_seed: bool, seed: int) -> int:
 def image_to_3d(
     image: Image.Image,
     multiimages: List[Tuple[Image.Image, str]],
+    image_detail_var: Image.Image, 
     raw_mesh: str, 
     demo_mode: DemoMode,
     seed: int,
@@ -199,6 +200,7 @@ def image_to_3d(
     Args:
         image (Image.Image): The input image.
         multiimages (List[Tuple[Image.Image, str]]): The input images in multi-image mode.
+        image_detail_var (Image.Image): The input image used for detailed variation.
         raw_mesh (str): raw mesh (ONLY required for Detail Variation mode).
         demo_mode (Demo): Mode of current run (SingleImageTo3D / MultiImageTo3D / DetailVariation).
         seed (int): The random seed.
@@ -250,7 +252,7 @@ def image_to_3d(
         binary_voxel = trimesh.load(voxelize_mesh(raw_mesh)).matrix 
         outputs = pipeline.run_detail_variation(
             binary_voxel, 
-            image,
+            image_detail_var,
             seed=seed, 
             formats=["gaussian", "mesh"],
             preprocess_image=False,
@@ -376,7 +378,7 @@ with gr.Blocks(delete_cache=(600, 600)) as demo:
                     with gr.Row():
                         mesh_prompt = gr.Model3D(label="Input Raw Mesh(Z-UP)", height=300, display_mode="Solid", clear_color=[1, 1, 1, 1])
                         mesh_prompt_view = gr.Model3D(label="Preview Input Mesh", height=300, display_mode="Solid", clear_color=[1, 1, 1, 1])
-                        image_prompt = gr.Image(label="Image Prompt", format="png", image_mode="RGBA", type="pil", height=300)
+                        image_prompt_detail_var = gr.Image(label="Image Prompt", format="png", image_mode="RGBA", type="pil", height=300)
                     gr.Markdown("""
                         Input a mesh w/o texture and a reference image. 
                         
@@ -399,7 +401,7 @@ with gr.Blocks(delete_cache=(600, 600)) as demo:
             generate_btn = gr.Button("Generate")
             
             with gr.Accordion(label="Mesh Extraction Settings", open=True):
-                get_srgb_texture = gr.Checkbox(label="Get sRGB Texture(GAMMA CORRECTION)", value=False)
+                get_srgb_texture = gr.Checkbox(label="Get sRGB Texture", value=False)
                 texture_bake_mode = gr.Radio(["opt", "fast"], label="Texture Bake Mode", value='opt')
                 mesh_simplify = gr.Slider(0.5, 0.99, label="Simplify", value=0.95, step=0.01)
                 texture_size = gr.Slider(512, 2048, label="Texture Size", value=1024, step=512)
@@ -464,9 +466,9 @@ with gr.Blocks(delete_cache=(600, 600)) as demo:
                 f'assets/example_image/{image}'
                 for image in os.listdir("assets/example_image")
             ],
-            inputs=[image_prompt],
+            inputs=[image_prompt_detail_var],
             fn=preprocess_image,
-            outputs=[image_prompt],
+            outputs=[image_prompt_detail_var],
             run_on_click=True,
             examples_per_page=64,
             label="Example Images"
@@ -485,7 +487,7 @@ with gr.Blocks(delete_cache=(600, 600)) as demo:
         outputs=[demo_mode, slat_sampling_steps, single_image_example, multiimage_example, detail_var_example]
     )
     detail_var_input_tab.select(
-        lambda: tuple([DemoMode.TEXTURE_GEN, DETAIL_VAR_SLAT_SAMPLE_STEPS, gr.Row.update(visible=False), gr.Row.update(visible=False), gr.Row.update(visible=True)]),
+        lambda: tuple([DemoMode.DETAIL_VARIATION, DETAIL_VAR_SLAT_SAMPLE_STEPS, gr.Row.update(visible=False), gr.Row.update(visible=False), gr.Row.update(visible=True)]),
         outputs=[demo_mode, slat_sampling_steps, single_image_example, multiimage_example, detail_var_example] 
     )
     
@@ -499,6 +501,11 @@ with gr.Blocks(delete_cache=(600, 600)) as demo:
         inputs=[multiimage_prompt],
         outputs=[multiimage_prompt],
     )
+    image_prompt_detail_var.upload(
+        preprocess_images, 
+        inputs=[image_prompt_detail_var],
+        outputs=[image_prompt_detail_var],
+    )
     mesh_prompt.upload(
         preprocess_mesh, 
         inputs=[mesh_prompt], 
@@ -511,7 +518,7 @@ with gr.Blocks(delete_cache=(600, 600)) as demo:
         outputs=[seed],
     ).then(
         image_to_3d,
-        inputs=[image_prompt, multiimage_prompt, mesh_prompt, demo_mode, seed, ss_guidance_strength,  ss_sampling_steps, slat_guidance_strength, slat_sampling_steps, multiimage_algo],
+        inputs=[image_prompt, multiimage_prompt, image_prompt_detail_var, mesh_prompt, demo_mode, seed, ss_guidance_strength,  ss_sampling_steps, slat_guidance_strength, slat_sampling_steps, multiimage_algo],
         outputs=[output_buf, video_output],
     ).then(
         lambda: tuple([gr.Button(interactive=True), gr.Button(interactive=True)]),
