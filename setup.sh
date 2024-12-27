@@ -1,5 +1,5 @@
 # Read Arguments
-TEMP=`getopt -o h --long help,new-env,basic,xformers,flash-attn,diffoctreerast,vox2seq,spconv,mipgaussian,kaolin,nvdiffrast,demo -n 'setup.sh' -- "$@"`
+TEMP=`getopt -o h --long help,new-env,basic,xformers,flash-attn,diffoctreerast,vox2seq,spconv,mipgaussian,kaolin,nvdiffrast,gsplat,demo -n 'setup.sh' -- "$@"`
 
 eval set -- "$TEMP"
 
@@ -16,6 +16,7 @@ ERROR=false
 MIPGAUSSIAN=false
 KAOLIN=false
 NVDIFFRAST=false
+GSPLAT=false
 DEMO=false
 
 if [ "$#" -eq 1 ] ; then
@@ -35,6 +36,7 @@ while true ; do
         --mipgaussian) MIPGAUSSIAN=true ; shift ;;
         --kaolin) KAOLIN=true ; shift ;;
         --nvdiffrast) NVDIFFRAST=true ; shift ;;
+        --gsplat) GSPLAT=true ; shift ;;
         --demo) DEMO=true ; shift ;;
         --) shift ; break ;;
         *) ERROR=true ; break ;;
@@ -60,6 +62,7 @@ if [ "$HELP" = true ] ; then
     echo "  --mipgaussian           Install mip-splatting"
     echo "  --kaolin                Install kaolin"
     echo "  --nvdiffrast            Install nvdiffrast"
+    echo "  --gsplat                Install gsplat"
     echo "  --demo                  Install all dependencies for demo"
     return
 fi
@@ -247,4 +250,12 @@ fi
 
 if [ "$DEMO" = true ] ; then
     pip install gradio==4.44.1 gradio_litmodel3d==0.0.1
+fi
+
+if [ "$GSPLAT" = true ] ; then
+    if [ "$PLATFORM" = "cuda" ] ; then
+        pip install git+https://github.com/nerfstudio-project/gsplat
+    else
+        echo "[GSPLAT] Unsupported platform: $PLATFORM"
+    fi
 fi

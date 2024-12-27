@@ -405,6 +405,7 @@ def to_glb(
     texture_size: int = 1024,
     debug: bool = False,
     verbose: bool = True,
+    gs_renderer='gsplat',
 ) -> trimesh.Trimesh:
     """
     Convert a generated asset to a glb file.
@@ -418,6 +419,7 @@ def to_glb(
         texture_size (int): Size of the texture.
         debug (bool): Whether to print debug information.
         verbose (bool): Whether to print progress.
+        gs_renderer (str): Name of the renderer to use for gaussian splatting rendering.
     """
     vertices = mesh.vertices.cpu().numpy()
     faces = mesh.faces.cpu().numpy()
@@ -433,14 +435,15 @@ def to_glb(
         fill_holes_resolution=1024,
         fill_holes_num_views=1000,
         debug=debug,
-        verbose=verbose,
+        verbose=verbose
     )
 
     # parametrize mesh
     vertices, faces, uvs = parametrize_mesh(vertices, faces)
 
     # bake texture
-    observations, extrinsics, intrinsics = render_multiview(app_rep, resolution=1024, nviews=100)
+    observations, extrinsics, intrinsics = render_multiview(app_rep, resolution=1024, nviews=100,
+                                                            gs_renderer=gs_renderer)
     masks = [np.any(observation > 0, axis=-1) for observation in observations]
     extrinsics = [extrinsics[i].cpu().numpy() for i in range(len(extrinsics))]
     intrinsics = [intrinsics[i].cpu().numpy() for i in range(len(intrinsics))]
