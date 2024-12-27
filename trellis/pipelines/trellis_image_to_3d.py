@@ -1,9 +1,10 @@
+import os 
 from typing import *
 from contextlib import contextmanager
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
+import numpy as np 
 from tqdm import tqdm
 from easydict import EasyDict as edict
 from torchvision import transforms
@@ -81,6 +82,19 @@ class TrellisImageTo3DPipeline(Pipeline):
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ])
         self.image_cond_model_transform = transform
+        
+    def preprocess_voxel(self, binary_voxel: np.ndarray, voxel_res: int = 64) -> torch.Tensor: 
+        """ 
+        Preprocess(read / voxelize) the given 3D object.
+        """
+        assert all([s == voxel_res for s in binary_voxel.shape]), "Input voxels have incompatible resolution {}".format(binary_voxel.shape)
+        # Active voxels (N_p x 3)
+        x, y, z = np.nonzero(binary_voxel)
+        values_sum = x * voxel_res * voxel_res + y * voxel_res + z 
+        active_voxels = np.stack([x, y, z], axis=1)[np.argsort(values_sum)]
+        active_voxels = np.concatenate((np.zeros((len(active_voxels), 1), dtype=np.int32), active_voxels), axis=1)
+        # Pad with the batch dimension 
+        return torch.from_numpy(active_voxels).int().cuda()
 
     def preprocess_image(self, input: Image.Image) -> Image.Image:
         """
@@ -253,11 +267,51 @@ class TrellisImageTo3DPipeline(Pipeline):
         slat = slat * std + mean
         
         return slat
+    
+    @torch.no_grad()
+    def run_detail_variation(
+        self,
+        binary_voxel: np.ndarray, 
+        images: Union[Image.Image, List[Image.Image]],
+        num_samples: int = 1,
+        seed: int = 42,
+        sparse_structure_sampler_params: dict = {},
+        slat_sampler_params: dict = {},
+        formats: List[str] = ['mesh', 'gaussian', 'radiance_field'],
+        preprocess_image: bool = True,
+    ) -> dict:
+        """
+        Run the texture generation(2nd stage) pipeline.
+
+        Args:
+            binary_voxel (np.ndarray): The input binary voxel.
+            image (Image.Image or a list of Image.Image): The image prompt(s).
+            num_samples (int): The number of samples to generate.
+            sparse_structure_sampler_params (dict): Additional parameters for the sparse structure sampler.
+            slat_sampler_params (dict): Additional parameters for the structured latent sampler.
+            preprocess_image (bool): Whether to preprocess the image.
+        """
+        conds = []
+        if isinstance(images, Image.Image):
+            images = [images]
+        # Get condition for each image prompt and take average 
+        for image in images:
+            if preprocess_image:
+                image = self.preprocess_image(image)
+            conds.append(self.get_cond([image]))
+        cond = {
+            key: torch.stack([item[key] for item in conds], dim=0).mean(dim=0) for key in conds[0].keys()
+        }
+            
+        torch.manual_seed(seed)
+        coords = self.preprocess_voxel(binary_voxel)
+        slat = self.sample_slat(cond, coords, slat_sampler_params)
+        return self.decode_slat(slat, formats)
 
     @torch.no_grad()
     def run(
         self,
-        image: Image.Image,
+        images: Union[Image.Image, List[Image.Image]],
         num_samples: int = 1,
         seed: int = 42,
         sparse_structure_sampler_params: dict = {},
@@ -269,15 +323,24 @@ class TrellisImageTo3DPipeline(Pipeline):
         Run the pipeline.
 
         Args:
-            image (Image.Image): The image prompt.
+            image (Image.Image or a list of Image.Image): The image prompt(s).
             num_samples (int): The number of samples to generate.
             sparse_structure_sampler_params (dict): Additional parameters for the sparse structure sampler.
             slat_sampler_params (dict): Additional parameters for the structured latent sampler.
             preprocess_image (bool): Whether to preprocess the image.
         """
-        if preprocess_image:
-            image = self.preprocess_image(image)
-        cond = self.get_cond([image])
+        conds = []
+        if isinstance(images, Image.Image):
+            images = [images]
+        # Get condition for each image prompt and take average 
+        for image in images:
+            if preprocess_image:
+                image = self.preprocess_image(image)
+            conds.append(self.get_cond([image]))
+        cond = {
+            key: torch.stack([item[key] for item in conds], dim=0).mean(dim=0) for key in conds[0].keys()
+        }
+            
         torch.manual_seed(seed)
         coords = self.sample_sparse_structure(cond, num_samples, sparse_structure_sampler_params)
         slat = self.sample_slat(cond, coords, slat_sampler_params)

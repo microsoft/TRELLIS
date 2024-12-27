@@ -49,6 +49,7 @@ def render_frames(sample, extrinsics, intrinsics, options={}, colors_overwrite=N
         renderer.rendering_options.bg_color = options.get('bg_color', (0, 0, 0))
         renderer.rendering_options.ssaa = options.get('ssaa', 4)
         renderer.pipe.primitive = sample.primitive
+        primitive_type = "Octree"
     elif isinstance(sample, Gaussian):
         renderer = GaussianRenderer()
         renderer.rendering_options.resolution = options.get('resolution', 512)
@@ -58,17 +59,19 @@ def render_frames(sample, extrinsics, intrinsics, options={}, colors_overwrite=N
         renderer.rendering_options.ssaa = options.get('ssaa', 1)
         renderer.pipe.kernel_size = kwargs.get('kernel_size', 0.1)
         renderer.pipe.use_mip_gaussian = True
+        primitive_type = "Gaussian"
     elif isinstance(sample, MeshExtractResult):
         renderer = MeshRenderer()
         renderer.rendering_options.resolution = options.get('resolution', 512)
         renderer.rendering_options.near = options.get('near', 1)
         renderer.rendering_options.far = options.get('far', 100)
         renderer.rendering_options.ssaa = options.get('ssaa', 4)
+        primitive_type = "Mesh"
     else:
         raise ValueError(f'Unsupported sample type: {type(sample)}')
     
     rets = {}
-    for j, (extr, intr) in tqdm(enumerate(zip(extrinsics, intrinsics)), desc='Rendering', disable=not verbose):
+    for j, (extr, intr) in tqdm(enumerate(zip(extrinsics, intrinsics)), desc=f'Rendering {primitive_type}', total=len(extrinsics), disable=not verbose):
         if not isinstance(sample, MeshExtractResult):
             res = renderer.render(sample, extr, intr, colors_overwrite=colors_overwrite)
             if 'color' not in rets: rets['color'] = []
