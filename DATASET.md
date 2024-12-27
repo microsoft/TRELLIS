@@ -79,11 +79,7 @@ python dataset_toolkits/download.py ObjaverseXL --output_dir datasets/ObjaverseX
 
 Some datasets may require interactive login to Hugging Face or manual downloading. Please follow the instructions given by the toolkits.
 
-After downloading, update the metadata file with:
 
-```
-python dataset_toolkits/build_metadata.py ObjaverseXL --output_dir datasets/ObjaverseXL_sketchfab
-```
 
 ### Step 4: Render Multiview Images
 
@@ -104,11 +100,7 @@ For example, to render the ObjaverseXL (sketchfab) subset and save it to `datase
 python dataset_toolkits/render.py ObjaverseXL --output_dir datasets/ObjaverseXL_sketchfab
 ```
 
-Don't forget to update the metadata file with:
 
-```
-python dataset_toolkits/build_metadata.py ObjaverseXL --output_dir datasets/ObjaverseXL_sketchfab
-```
 
 ### Step 5: Voxelize 3D Models
 
@@ -125,12 +117,6 @@ python dataset_toolkits/voxelize.py <SUBSET> --output_dir <OUTPUT_DIR> [--rank <
 For example, to voxelize the ObjaverseXL (sketchfab) subset and save it to `datasets/ObjaverseXL_sketchfab`, we can run:
 ```
 python dataset_toolkits/voxelize.py ObjaverseXL --output_dir datasets/ObjaverseXL_sketchfab
-```
-
-Then update the metadata file with:
-
-```
-python dataset_toolkits/build_metadata.py ObjaverseXL --output_dir datasets/ObjaverseXL_sketchfab
 ```
 
 ### Step 6: Extract DINO Features
@@ -151,7 +137,7 @@ For example, to extract DINO features from the ObjaverseXL (sketchfab) subset an
 python dataset_toolkits/extract_feature.py --output_dir datasets/ObjaverseXL_sketchfab
 ```
 
-Then update the metadata file with:
+Now the metadata file should be updated manually:
 
 ```
 python dataset_toolkits/build_metadata.py ObjaverseXL --output_dir datasets/ObjaverseXL_sketchfab
@@ -222,10 +208,8 @@ For example, to render image conditions for the ObjaverseXL (sketchfab) subset a
 python dataset_toolkits/render_cond.py ObjaverseXL --output_dir datasets/ObjaverseXL_sketchfab
 ```
 
-Then update the metadata file with:
-
+### All in ONE Script 
+Merge all above procedures into a single shell script:
+``` 
+bash dataset_toolkits/dataset_pipe.sh
 ```
-python dataset_toolkits/build_metadata.py ObjaverseXL --output_dir datasets/ObjaverseXL_sketchfab
-```
-
-

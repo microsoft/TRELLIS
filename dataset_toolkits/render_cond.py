@@ -13,7 +13,7 @@ from utils import sphere_hammersley_sequence
 
 
 BLENDER_LINK = 'https://download.blender.org/release/Blender3.0/blender-3.0.1-linux-x64.tar.xz'
-BLENDER_INSTALLATION_PATH = '/tmp'
+BLENDER_INSTALLATION_PATH = './tmp'
 BLENDER_PATH = f'{BLENDER_INSTALLATION_PATH}/blender-3.0.1-linux-x64/blender'
 
 def _install_blender():
@@ -123,3 +123,6 @@ if __name__ == '__main__':
     cond_rendered = dataset_utils.foreach_instance(metadata, opt.output_dir, func, max_workers=opt.max_workers, desc='Rendering objects')
     cond_rendered = pd.concat([cond_rendered, pd.DataFrame.from_records(records)])
     cond_rendered.to_csv(os.path.join(opt.output_dir, f'cond_rendered_{opt.rank}.csv'), index=False)
+
+    from build_metadata import build_metadata
+    build_metadata(sys.argv[1], opt)

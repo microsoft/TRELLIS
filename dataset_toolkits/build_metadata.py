@@ -4,43 +4,39 @@ import sys
 import time
 import importlib
 import argparse
-import numpy as np
-import pandas as pd
+import pandas as pd 
+from typing import Union, Optional, List
 from tqdm import tqdm
 from easydict import EasyDict as edict
 from concurrent.futures import ThreadPoolExecutor
 import utils3d
 
-def get_first_directory(path):  
-    with os.scandir(path) as it:  
-        for entry in it:  
-            if entry.is_dir():  
-                return entry.name  
-    return None
 
-def need_process(key):
-    return key in opt.field or opt.field == ['all']
-
-if __name__ == '__main__':
-    dataset_utils = importlib.import_module(f'datasets.{sys.argv[1]}')
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--output_dir', type=str, required=True,
-                        help='Directory to save the metadata')
-    parser.add_argument('--field', type=str, default='all',
-                        help='Fields to process, separated by commas')
-    parser.add_argument('--from_file', action='store_true',
-                        help='Build metadata from file instead of from records of processings.' +
-                             'Useful when some processing fail to generate records but file already exists.')
-    dataset_utils.add_args(parser)
-    opt = parser.parse_args(sys.argv[2:])
-    opt = edict(vars(opt))
-
+def build_metadata(dataset_name: str, opt: Union[edict, argparse.ArgumentParser], cmd_args: Optional[List] = None):
+    """ 
+    Build meta information about the dataset already processed & to be processed 
+    Simple Wrapper to support call from other scripts and from command line (should have cmd_args)
+    
+    Args:
+        dataset_name (str): name of the dataset to be processed
+        opt (Union[edict, argparse.ArgumentParser]): options(call) or parser(cli)
+        cmd_args (Optional[List], optional): cli args, NEEDed when called from command line. Defaults to None.
+    """
+    dataset_utils = importlib.import_module(f'datasets.{dataset_name}')
+    if isinstance(opt, argparse.ArgumentParser):
+        dataset_utils.add_args(parser)
+        opt = parser.parse_args(cmd_args)
+        opt = edict(vars(opt))
+    
+    output_dir = opt.get("output_dir", None)
+    field = opt.get('field', 'all')
+    from_file = opt.get('from_file', False)
+    assert output_dir is not None, "Output directory MUST be provided."
+    
     os.makedirs(opt.output_dir, exist_ok=True)
     os.makedirs(os.path.join(opt.output_dir, 'merged_records'), exist_ok=True)
 
-    opt.field = opt.field.split(',')
-    
+    field = field.split(',')
     timestamp = str(int(time.time()))
 
     # get file list
@@ -193,9 +189,11 @@ if __name__ == '__main__':
             metadata.update(df, overwrite=True)
             for f in df_files:
                 shutil.move(os.path.join(opt.output_dir, f), os.path.join(opt.output_dir, 'merged_records', f'{timestamp}_{f}'))
+    
+    need_process = lambda key: key in field or field == ['all']
 
     # build metadata from files
-    if opt.from_file:
+    if from_file:
         with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor, \
             tqdm(total=len(metadata), desc="Building metadata") as pbar:
             def worker(sha256):
@@ -268,3 +266,17 @@ if __name__ == '__main__':
         
     with open(os.path.join(opt.output_dir, 'statistics.txt'), 'r') as f:
         print(f.read())
+
+
+if __name__ == '__main__':
+    dataset_name = sys.argv[1]
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--output_dir', type=str, required=True,
+                        help='Directory to save the metadata')
+    parser.add_argument('--field', type=str, default='all',
+                        help='Fields to process, separated by commas')
+    parser.add_argument('--from_file', action='store_true',
+                        help='Build metadata from file instead of from records of processings.' +
+                             'Useful when some processing fail to generate records but file already exists.')
+
+    build_metadata(dataset_name, parser, cmd_args=sys.argv[2:])
