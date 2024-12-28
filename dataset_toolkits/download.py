@@ -50,3 +50,6 @@ if __name__ == '__main__':
     # process objects
     downloaded = dataset_utils.download(metadata, **opt)
     downloaded.to_csv(os.path.join(opt.output_dir, f'downloaded_{opt.rank}.csv'), index=False)
+
+    from build_metadata import build_metadata
+    build_metadata(sys.argv[1], opt)

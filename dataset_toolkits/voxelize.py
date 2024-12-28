@@ -84,3 +84,6 @@ if __name__ == '__main__':
     voxelized = dataset_utils.foreach_instance(metadata, opt.output_dir, func, max_workers=opt.max_workers, desc='Voxelizing')
     voxelized = pd.concat([voxelized, pd.DataFrame.from_records(records)])
     voxelized.to_csv(os.path.join(opt.output_dir, f'voxelized_{opt.rank}.csv'), index=False)
+
+    from build_metadata import build_metadata
+    build_metadata(sys.argv[1], opt)
