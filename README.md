@@ -179,6 +179,19 @@ After running the code, you will get the following files:
 - `sample.glb`: a GLB file containing the extracted textured mesh
 - `sample.ply`: a PLY file containing the 3D Gaussian representation
 
+### Colab Demo
+
+If you’d prefer to set up and run TRELLIS in a **Google Colab** environment, check out the [Trellis-Colab repository](https://github.com/jackel27/Trellis-Colab). You’ll find:
+
+- **Step-by-step** CUDA 11.8 + conda environment configuration  
+- Scripts to install **PyTorch**, **flash-attn**, **spconv**, **kaolin**, etc.  
+- **Cells** for cloning the TRELLIS repo, building submodules, and launching the Gradio demo  
+- Options to expose the Gradio app via **ngrok** or **cloudflared**  
+
+You can **view** or **run** the notebook directly from GitHub by clicking the badge below:
+
+[Open In Colab](https://colab.research.google.com/github/jackel27/Trellis-Colab/blob/main/Kaiser-Trellis.ipynb)
+
 
 ### Web Demo
 
