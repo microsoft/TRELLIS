@@ -397,7 +397,7 @@ def bake_texture(
 
 
 def to_glb(
-    app_rep: Union[Strivec, Gaussian],
+    app_rep: Union[Strivec, Gaussian, MeshExtractResult],
     mesh: MeshExtractResult,
     simplify: float = 0.95,
     fill_holes: bool = True,
@@ -410,7 +410,7 @@ def to_glb(
     Convert a generated asset to a glb file.
 
     Args:
-        app_rep (Union[Strivec, Gaussian]): Appearance representation.
+        app_rep (Union[Strivec, Gaussian, MeshExtractResult]): Appearance representation.
         mesh (MeshExtractResult): Extracted mesh.
         simplify (float): Ratio of faces to remove in simplification.
         fill_holes (bool): Whether to fill holes in the mesh.

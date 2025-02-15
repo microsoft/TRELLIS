@@ -82,7 +82,9 @@ def render_frames(sample, extrinsics, intrinsics, options={}, colors_overwrite=N
                 rets['depth'].append(None)
         else:
             res = renderer.render(sample, extr, intr)
+            if 'color' not in rets: rets['color'] = []
             if 'normal' not in rets: rets['normal'] = []
+            rets['color'].append(np.clip(res['color'].detach().cpu().numpy().transpose(1, 2, 0) * 255, 0, 255).astype(np.uint8))
             rets['normal'].append(np.clip(res['normal'].detach().cpu().numpy().transpose(1, 2, 0) * 255, 0, 255).astype(np.uint8))
     return rets
 

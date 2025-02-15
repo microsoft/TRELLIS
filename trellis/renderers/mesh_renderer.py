@@ -57,7 +57,7 @@ class MeshRenderer:
             mesh : MeshExtractResult,
             extrinsics: torch.Tensor,
             intrinsics: torch.Tensor,
-            return_types = ["mask", "normal", "depth"]
+            return_types = ["mask", "normal", "depth", "color"]
         ) -> edict:
         """
         Render the mesh.
