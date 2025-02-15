@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 from easydict import EasyDict as edict
 from skimage import measure
 from typing import Tuple, Optional
@@ -57,7 +58,9 @@ class EnhancedMarchingCubes:
         if voxelgrid_colors is not None:
             if voxelgrid_colors.dim() == 2:
                 voxelgrid_colors = voxelgrid_colors.reshape(grid_size, grid_size, grid_size, -1)
-            colors = self._interpolate_colors(deformed_vertices, voxelgrid_colors)
+            colors = self._interpolate_colors(vertices, voxelgrid_colors)
+            # Ensure colors are in [0, 1] range
+            colors = torch.sigmoid(colors)
 
         # Compute deviation loss for training
         deviation_loss = torch.tensor(0.0, device=self.device)
