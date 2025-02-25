@@ -25,13 +25,21 @@ class Pipeline:
         """
         import os
         import json
+        print("==========================Loading pipeline from:", path)
+        print(f"{path}/pipeline.json")
         is_local = os.path.exists(f"{path}/pipeline.json")
 
         if is_local:
+            print("Loading from local")
             config_file = f"{path}/pipeline.json"
         else:
             from huggingface_hub import hf_hub_download
-            config_file = hf_hub_download(path, "pipeline.json")
+            proxies = {
+                "http": "http://127.0.0.1:52260",
+                "https": "http://127.0.0.1:52260",
+            }
+            print("Loading from hub")
+            config_file = hf_hub_download(path, "pipeline.json",proxies=proxies)
 
         with open(config_file, 'r') as f:
             args = json.load(f)['args']

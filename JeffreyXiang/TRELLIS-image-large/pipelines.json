@@ -1,0 +1,60 @@
+{
+    "name": "TrellisImageTo3DPipeline",
+    "args": {
+        "models": {
+            "sparse_structure_decoder": "ckpts/ss_dec_conv3d_16l8_fp16",
+            "sparse_structure_flow_model": "ckpts/ss_flow_img_dit_L_16l8_fp16",
+            "slat_decoder_gs": "ckpts/slat_dec_gs_swin8_B_64l8gs32_fp16",
+            "slat_decoder_rf": "ckpts/slat_dec_rf_swin8_B_64l8r16_fp16",
+            "slat_decoder_mesh": "ckpts/slat_dec_mesh_swin8_B_64l8m256c_fp16",
+            "slat_flow_model": "ckpts/slat_flow_img_dit_L_64l8p2_fp16"
+        },
+        "sparse_structure_sampler": {
+            "name": "FlowEulerGuidanceIntervalSampler",
+            "args": {
+                "sigma_min": 1e-5
+            },
+            "params": {
+                "steps": 25,
+                "cfg_strength": 5.0,
+                "cfg_interval": [0.5, 1.0],
+                "rescale_t": 3.0
+            }
+        },
+        "slat_sampler": {
+            "name": "FlowEulerGuidanceIntervalSampler",
+            "args": {
+                "sigma_min": 1e-5
+            },
+            "params": {
+                "steps": 25,
+                "cfg_strength": 5.0,
+                "cfg_interval": [0.5, 1.0],
+                "rescale_t": 3.0
+            }
+        },
+        "slat_normalization": {
+            "mean": [
+                -2.1687545776367188,
+                -0.004347046371549368,
+                -0.13352349400520325,
+                -0.08418072760105133,
+                -0.5271206498146057,
+                0.7238689064979553,
+                -1.1414450407028198,
+                1.2039363384246826
+            ],
+            "std": [
+                2.377650737762451,
+                2.386378288269043,
+                2.124418020248413,
+                2.1748552322387695,
+                2.663944721221924,
+                2.371192216873169,
+                2.6217446327209473,
+                2.684523105621338
+            ]
+        },
+        "image_cond_model": "dinov2_vitl14_reg"
+    }
+}
