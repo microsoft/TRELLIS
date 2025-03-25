@@ -1,0 +1,2 @@
+git+https://github.com/JeffreyXiang/diffoctreerast.git
+git+https://github.com/autonomousvision/mip-splatting.git#subdirectory=submodules/diff-gaussian-rasterization/
