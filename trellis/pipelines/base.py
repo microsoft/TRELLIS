@@ -35,8 +35,8 @@ class Pipeline:
         else:
             from huggingface_hub import hf_hub_download
             proxies = {
-                "http": "http://127.0.0.1:52260",
-                "https": "http://127.0.0.1:52260",
+                "http": "http://127.0.0.1:57044",
+                "https": "http://127.0.0.1:57044",
             }
             print("Loading from hub")
             config_file = hf_hub_download(path, "pipeline.json",proxies=proxies)

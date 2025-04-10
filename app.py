@@ -63,6 +63,8 @@ def pack_state(gs: Gaussian, mesh: MeshExtractResult) -> dict:
         'gaussian': {
             **gs.init_params,
             '_xyz': gs._xyz.cpu().numpy(),
+            # For float16降低精度
+            #'_xyz': gs._xyz.cpu().numpy().astype(np.float16),
             '_features_dc': gs._features_dc.cpu().numpy(),
             '_scaling': gs._scaling.cpu().numpy(),
             '_rotation': gs._rotation.cpu().numpy(),
@@ -85,6 +87,8 @@ def unpack_state(state: dict) -> Tuple[Gaussian, edict, str]:
         scaling_activation=state['gaussian']['scaling_activation'],
     )
     gs._xyz = torch.tensor(state['gaussian']['_xyz'], device='cuda')
+    # For float16降低精度
+    #gs._xyz = torch.tensor(state['gaussian']['_xyz'], device='cuda', dtype=torch.float16)
     gs._features_dc = torch.tensor(state['gaussian']['_features_dc'], device='cuda')
     gs._scaling = torch.tensor(state['gaussian']['_scaling'], device='cuda')
     gs._rotation = torch.tensor(state['gaussian']['_rotation'], device='cuda')
