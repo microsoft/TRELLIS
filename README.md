@@ -51,7 +51,7 @@
     cd TRELLIS
     ```
 
-2. Install the dependencies:
+2.  Install the dependencies:
     
     **Before running the following command there are somethings to note:**
     - By adding `--new-env`, a new conda environment named `trellis` will be created. If you want to use an existing conda environment, please remove this flag.
@@ -83,6 +83,101 @@
         --nvdiffrast            Install nvdiffrast
         --demo                  Install all dependencies for demo
     ```
+
+**If you have a RTX 5090 you need to follow these steps**
+
+1. Create your conda environment.
+```
+conda create --name trellis python==3.10
+```
+
+2. Check that you are under CUDA 12.8
+
+```nvcc --version```
+
+2. Launch the setup script but remove a few arguments.
+```
+. ./setup.sh --new-env --basic --flash-attn --spconv --mipgaussian --nvdiffrast
+```
+
+3. Install the latest Nightly Torch
+
+(For Linux, fetch the right command for you [here](https://pytorch.org/get-started/locally/)).
+  
+```
+pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu128 
+```
+
+4. Now you need to build Xformers from source.
+```
+git clone https://github.com/facebookresearch/xformers.git
+cd xformers
+pip intall -e .
+```
+5. Build Diffoctreerast
+```
+cd /tmp/extensions/diffoctreerast
+pip install -e .
+```
+
+6. Build Diff Gaussian Rasterization
+```
+cd /tmp/extensions/mip-splatting/submodules/diff-gaussian-rasterization
+pip install -e .
+```
+
+Now get back into the Trellis folder you cloned.
+
+7. Build Kaolin from source
+Normally, Kaolin submodule is already there. If it isn't, just clone it.
+
+```
+git clone https://github.com/NVIDIAGameWorks/kaolin
+cd kaolin
+```
+
+Okay, before building Kaolin, you'll need to ignore the warnings about Torch version.
+```
+export IGNORE_TORCH_VER=1
+```
+
+Then you'll need to install Cython.
+
+```pip install "Cython >= 0.29.37"```
+
+Then, finally, you can build Kaolin.
+
+```
+pip install -e .
+```
+
+8. Get out of the Kaolin folder to go back into the Trellis folder, and install the dependencies for the Gradio demo (if you need it).
+
+```
+. ./setup.sh --demo
+```
+
+9. At this stage, if you try to launch app.py, you'll certainly have a torchvision error. Just fix it like this.
+```
+pip uninstall -y torchvision
+pip install --pre torchvision --index-url https://download.pytorch.org/whl/nightly/cu128
+```
+
+10. If you have a ```GLIBCXX``` error, do this.
+```
+conda install -c conda-forge libstdcxx-ng
+```
+
+11. Finally upgrade Gradio.
+```
+pip install -U gradio
+```
+
+12. Launch the app!
+```
+python app.py
+```
+
 
 <!-- Pretrained Models -->
 ## 🤖 Pretrained Models
