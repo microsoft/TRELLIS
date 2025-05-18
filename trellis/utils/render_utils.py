@@ -100,14 +100,14 @@ def render_video(sample, resolution=512, bg_color=(0, 0, 0), num_frames=300, r=2
     return render_frames(sample, extrinsics, intrinsics, {'resolution': resolution, 'bg_color': bg_color}, **kwargs)
 
 
-def render_multiview(sample, resolution=512, nviews=30):
+def render_multiview(sample, resolution=512, nviews=30, **kwargs):
     r = 2
     fov = 40
     cams = [sphere_hammersley_sequence(i, nviews) for i in range(nviews)]
     yaws = [cam[0] for cam in cams]
     pitchs = [cam[1] for cam in cams]
     extrinsics, intrinsics = yaw_pitch_r_fov_to_extrinsics_intrinsics(yaws, pitchs, r, fov)
-    res = render_frames(sample, extrinsics, intrinsics, {'resolution': resolution, 'bg_color': (0, 0, 0)})
+    res = render_frames(sample, extrinsics, intrinsics, {'resolution': resolution, 'bg_color': (0, 0, 0)}, **kwargs)
     return res['color'], extrinsics, intrinsics
 
 
