@@ -218,6 +218,17 @@ if __name__ == '__main__':
     )
     exit()
 
+
+    multi_result = client.generate_and_download_from_multiple_images(
+        '/home/charlie/Desktop/Holodeck/hippo/datasets/sacha_kitchen/segments/6/rgb',
+        target_dir="./blo",
+        params={
+            'multiimage_algo': 'stochastic',
+            'seed': 123
+        }
+    )
+    exit()
+
     single_result = client.generate_and_download_from_single_image(
         'test/000.png',
         target_dir="./bla",
