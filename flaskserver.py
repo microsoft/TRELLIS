@@ -40,6 +40,8 @@ def pack_state(gs: Gaussian, mesh: MeshExtractResult) -> dict:
         },
     }
 
+from typing import Tuple
+
 def unpack_state(state: dict) -> Tuple[Gaussian, edict]:
     gs = Gaussian(
         aabb=state['gaussian']['aabb'],
@@ -103,7 +105,7 @@ def generate_from_single_image():
             image,
             seed=seed,
             formats=["gaussian", "mesh"],
-            preprocess_image=False,
+            preprocess_image=True,
             sparse_structure_sampler_params={
                 "steps": ss_sampling_steps,
                 "cfg_strength": ss_guidance_strength,
@@ -180,7 +182,7 @@ def generate_from_multiple_images():
             images,
             seed=seed,
             formats=["gaussian", "mesh"],
-            preprocess_image=False,
+            preprocess_image=True,
             sparse_structure_sampler_params={
                 "steps": ss_sampling_steps,
                 "cfg_strength": ss_guidance_strength,
