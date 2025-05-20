@@ -84,8 +84,6 @@ class TrellisImageTo3DPipeline(Pipeline):
         Preprocess the input image.
         """
         # if has alpha channel, use it directly; otherwise, remove background
-
-        print("Processing images...")
         has_alpha = False
         if input.mode == 'RGBA':
             alpha = np.array(input)[:, :, 3]
@@ -94,7 +92,6 @@ class TrellisImageTo3DPipeline(Pipeline):
         if has_alpha:
             output = input
         else:
-            print("Removing background...")
             input = input.convert('RGB')
             max_size = max(input.size)
             scale = min(1, 1024 / max_size)
