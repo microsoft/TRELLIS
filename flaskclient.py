@@ -1,6 +1,10 @@
+import threading
+import time
+
 import requests
 import os
 import uuid
+from tqdm import tqdm
 
 class Trellis3DClient:
     def __init__(self, base_url='http://localhost:5000'):
@@ -139,6 +143,7 @@ class Trellis3DClient:
         os.makedirs(target_dir, exist_ok=True)
 
         # Generate the 3D model
+        et = start_spinner_thread("Generating 3D model...")
         gen_result = self.generate_from_single_image(image_path, params)
 
         # Download preview
@@ -147,14 +152,17 @@ class Trellis3DClient:
             f"{self.base_url}{gen_result['preview_url']}",
             preview_path
         )
+        stop_spinner_thread(*et)
 
         # Extract and download GLB
+        et = start_spinner_thread("Extracting 3D model...")
         glb_result = self.extract_glb(gen_result['session_id'], params)
         glb_path = os.path.join(target_dir, 'model.glb')
         self.download_file(
             f"{self.base_url}{glb_result['glb_url']}",
             glb_path
         )
+        stop_spinner_thread(*et)
 
         return {
             'preview_path': preview_path,
@@ -180,6 +188,7 @@ class Trellis3DClient:
         os.makedirs(target_dir, exist_ok=True)
 
         # Generate the 3D model
+        et = start_spinner_thread("Generating 3D model...")
         gen_result = self.generate_from_multiple_images(image_paths, params)
 
         # Download preview
@@ -188,14 +197,17 @@ class Trellis3DClient:
             f"{self.base_url}{gen_result['preview_url']}",
             preview_path
         )
+        stop_spinner_thread(*et)
 
         # Extract and download GLB
+        et = start_spinner_thread("Extracting 3D model...")
         glb_result = self.extract_glb(gen_result['session_id'], params)
         glb_path = os.path.join(target_dir, 'model.glb')
         self.download_file(
             f"{self.base_url}{glb_result['glb_url']}",
             glb_path
         )
+        stop_spinner_thread(*et)
 
         return {
             'preview_path': preview_path,
@@ -203,6 +215,31 @@ class Trellis3DClient:
             'session_id': gen_result['session_id'],
             'target_dir': target_dir
         }
+
+def spinner(desc, stop_event):
+    from itertools import cycle
+
+    spinner = cycle(['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'])
+    with tqdm(total=None, desc=desc, bar_format='{desc}') as pbar:
+        while not stop_event.is_set():
+            pbar.set_description(f"{desc} - {next(spinner)}")
+            time.sleep(0.1)
+            #pbar.update()
+
+def start_spinner_thread(desc) -> (threading.Event, threading.Thread):
+    stop_event = threading.Event()
+    spinner_thread = threading.Thread(
+        target=spinner,
+        args=(desc, stop_event)
+    )
+    spinner_thread.start()
+
+    return stop_event, spinner_thread
+
+def stop_spinner_thread(stop_event, spinner_thread):
+    stop_event.set()
+    spinner_thread.join(timeout=5)
+
 
 # Example usage
 if __name__ == '__main__':
@@ -228,76 +265,3 @@ if __name__ == '__main__':
         }
     )
     exit()
-
-    single_result = client.generate_and_download_from_single_image(
-        'test/000.png',
-        target_dir="./bla",
-        params={
-            'seed': 42,
-            'ss_guidance_strength': 7.5,
-            'slat_guidance_strength': 3.0
-        }
-    )
-
-    exit()
-    
-    # Example 1: Single image generation
-    print("Generating from single image...")
-    single_result = client.generate_from_single_image(
-        'test/000.png',
-        params={
-            'seed': 42,
-            'ss_guidance_strength': 7.5,
-            'slat_guidance_strength': 3.0
-        }
-    )
-    print(single_result)
-    
-    # Download preview
-    client.download_file(
-        f"http://localhost:5000{single_result['preview_url']}",
-        'single_preview.mp4'
-    )
-    
-    # Extract GLB
-    glb_result = client.extract_glb(
-        single_result['session_id'],
-        params={'mesh_simplify': 0.95}
-    )
-    print(glb_result)
-    
-    # Download GLB
-    client.download_file(
-        f"http://localhost:5000{glb_result['glb_url']}",
-        'single_model.glb'
-    )
-    
-    # Example 2: Multiple image generation
-    print("\nGenerating from multiple images...")
-    multi_result = client.generate_from_multiple_images(
-        ['view1.png', 'view2.png', 'view3.png'],
-        params={
-            'multiimage_algo': 'stochastic',
-            'seed': 123
-        }
-    )
-    print(multi_result)
-    
-    # Download preview
-    client.download_file(
-        f"http://localhost:5000{multi_result['preview_url']}",
-        'multi_preview.mp4'
-    )
-    
-    # Extract GLB
-    glb_result = client.extract_glb(
-        multi_result['session_id'],
-        params={'texture_size': 2048}
-    )
-    print(glb_result)
-    
-    # Download GLB
-    client.download_file(
-        f"http://localhost:5000{glb_result['glb_url']}",
-        'multi_model.glb'
-    )
