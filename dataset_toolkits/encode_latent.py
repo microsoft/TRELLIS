@@ -27,7 +27,7 @@ if __name__ == '__main__':
                         help='Filter objects with aesthetic score lower than this value')
     parser.add_argument('--feat_model', type=str, default='dinov2_vitl14_reg',
                         help='Feature model')
-    parser.add_argument('--enc_pretrained', type=str, default='JeffreyXiang/TRELLIS-image-large/ckpts/slat_enc_swin8_B_64l8_fp16',
+    parser.add_argument('--enc_pretrained', type=str, default='microsoft/TRELLIS-image-large/ckpts/slat_enc_swin8_B_64l8_fp16',
                         help='Pretrained encoder model')
     parser.add_argument('--model_root', type=str, default='results',
                         help='Root directory of models')

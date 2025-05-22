@@ -14,7 +14,7 @@ class SparseStructureLatentVisMixin:
     def __init__(
         self,
         *args,
-        pretrained_ss_dec: str = 'JeffreyXiang/TRELLIS-image-large/ckpts/ss_dec_conv3d_16l8_fp16',
+        pretrained_ss_dec: str = 'microsoft/TRELLIS-image-large/ckpts/ss_dec_conv3d_16l8_fp16',
         ss_dec_path: Optional[str] = None,
         ss_dec_ckpt: Optional[str] = None,
         **kwargs
@@ -133,7 +133,7 @@ class SparseStructureLatent(SparseStructureLatentVisMixin, StandardDatasetBase):
         latent_model: str,
         min_aesthetic_score: float = 5.0,
         normalization: Optional[dict] = None,
-        pretrained_ss_dec: str = 'JeffreyXiang/TRELLIS-image-large/ckpts/ss_dec_conv3d_16l8_fp16',
+        pretrained_ss_dec: str = 'microsoft/TRELLIS-image-large/ckpts/ss_dec_conv3d_16l8_fp16',
         ss_dec_path: Optional[str] = None,
         ss_dec_ckpt: Optional[str] = None,
     ):

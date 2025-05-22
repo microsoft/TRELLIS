@@ -220,7 +220,7 @@ class SLatVaeMeshDecoderTrainer(BasicTrainer):
         buffer = self._render_batch(reps, extrinsics, intrinsics, return_types=['color'])
         success_mask = torch.tensor([rep.success for rep in reps], device=self.device)
         if success_mask.sum() != 0:
-            terms.update(self._perceptual_loss(image * alpha[:, None][success_mask], buffer['color'][success_mask], 'color'))
+            terms.update(self._perceptual_loss((image * alpha[:, None])[success_mask], buffer['color'][success_mask], 'color'))
             terms['color_loss'] = terms['color_loss'] + terms['color_loss_perceptual'] * self.lambda_color
         return terms
     

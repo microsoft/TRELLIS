@@ -33,7 +33,7 @@ if __name__ == '__main__':
                         help='Directory to save the metadata')
     parser.add_argument('--filter_low_aesthetic_score', type=float, default=None,
                         help='Filter objects with aesthetic score lower than this value')
-    parser.add_argument('--enc_pretrained', type=str, default='JeffreyXiang/TRELLIS-image-large/ckpts/ss_enc_conv3d_16l8_fp16',
+    parser.add_argument('--enc_pretrained', type=str, default='microsoft/TRELLIS-image-large/ckpts/ss_enc_conv3d_16l8_fp16',
                         help='Pretrained encoder model')
     parser.add_argument('--model_root', type=str, default='results',
                         help='Root directory of models')
