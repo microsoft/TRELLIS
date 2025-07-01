@@ -27,7 +27,10 @@ if __name__ == '__main__':
     # get file list
     if not os.path.exists(os.path.join(opt.output_dir, 'metadata.csv')):
         raise ValueError('metadata.csv not found')
-    metadata = pd.read_csv(os.path.join(opt.output_dir, 'metadata.csv'))
+
+    with open(os.path.join(opt.output_dir, 'metadata.csv'), 'r', encoding='utf-8', errors='ignore') as f:
+        metadata = pd.read_csv(f)
+
     if opt.instances is None:
         if opt.filter_low_aesthetic_score is not None:
             metadata = metadata[metadata['aesthetic_score'] >= opt.filter_low_aesthetic_score]
