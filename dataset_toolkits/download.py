@@ -52,4 +52,5 @@ if __name__ == '__main__':
 
     # process objects
     downloaded = dataset_utils.download(metadata, **opt)
-    downloaded.to_csv(os.path.join(opt.output_dir, f'downloaded_{opt.rank}.csv'), index=False)
+    with open(os.path.join(opt.output_dir, f'downloaded_{opt.rank}.csv'), 'w', encoding='utf-8', errors='ignore') as f:
+        downloaded.to_csv(f, index=False)
