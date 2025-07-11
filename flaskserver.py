@@ -19,7 +19,7 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['OUTPUT_FOLDER'], exist_ok=True)
 
 # Initialize pipeline
-pipeline = TrellisImageTo3DPipeline.from_pretrained("JeffreyXiang/TRELLIS-image-large")
+pipeline = TrellisImageTo3DPipeline.from_pretrained("gqk/TRELLIS-image-large-fork")
 pipeline.cuda()
 
 MAX_SEED = np.iinfo(np.int32).max
@@ -78,6 +78,7 @@ def generate_from_single_image():
         ss_sampling_steps = int(request.form.get('ss_sampling_steps', 12))
         slat_guidance_strength = float(request.form.get('slat_guidance_strength', 3.0))
         slat_sampling_steps = int(request.form.get('slat_sampling_steps', 12))
+        preprocess_image = request.form.get('preprocess_image', 'True').lower() == 'true'
         
         # Handle file upload
         if 'image' not in request.files:
@@ -98,14 +99,13 @@ def generate_from_single_image():
         file.save(image_path)
         
         # Preprocess image
-        image = preprocess_image(image_path)
         
         # Generate 3D model
         outputs = pipeline.run(
-            image,
+            Image.open(image_path),
             seed=seed,
             formats=["gaussian", "mesh"],
-            preprocess_image=True,
+            preprocess_image=preprocess_image,
             sparse_structure_sampler_params={
                 "steps": ss_sampling_steps,
                 "cfg_strength": ss_guidance_strength,
@@ -153,6 +153,7 @@ def generate_from_multiple_images():
         slat_guidance_strength = float(request.form.get('slat_guidance_strength', 3.0))
         slat_sampling_steps = int(request.form.get('slat_sampling_steps', 12))
         multiimage_algo = request.form.get('multiimage_algo', 'stochastic')
+        preprocess_image = request.form.get('preprocess_image', 'True').lower() == 'true'
         
         # Handle file uploads
         if 'images' not in request.files:
@@ -182,7 +183,7 @@ def generate_from_multiple_images():
             images,
             seed=seed,
             formats=["gaussian", "mesh"],
-            preprocess_image=True,
+            preprocess_image=preprocess_image,
             sparse_structure_sampler_params={
                 "steps": ss_sampling_steps,
                 "cfg_strength": ss_guidance_strength,
@@ -278,4 +279,16 @@ def download_glb(session_id):
     return send_file(glb_path, as_attachment=True)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, threaded=True)
+
+    #def find_free_port():
+    #    # todo
+    #    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+    #        s.bind(('0.0.0.0', 0))  # Bind to a free port provided by the host
+    #        return s.getsockname()[1]  # Return the port number assigned
+    import sys
+    for i, arg in sys.argv:
+        if arg.startswith('--port='):
+            port = int(arg.split('=')[1])
+            break
+
+    app.run(host='0.0.0.0', port=port, threaded=True)
