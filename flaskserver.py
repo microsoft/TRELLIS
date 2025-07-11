@@ -286,7 +286,7 @@ if __name__ == '__main__':
     #        s.bind(('0.0.0.0', 0))  # Bind to a free port provided by the host
     #        return s.getsockname()[1]  # Return the port number assigned
     import sys
-    for i, arg in sys.argv:
+    for arg in sys.argv:
         if arg.startswith('--port='):
             port = int(arg.split('=')[1])
             break
