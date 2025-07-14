@@ -13,6 +13,8 @@ from trellis.representations import Gaussian, MeshExtractResult
 from trellis.utils import render_utils, postprocessing_utils
 
 
+
+
 MAX_SEED = np.iinfo(np.int32).max
 TMP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tmp')
 os.makedirs(TMP_DIR, exist_ok=True)
@@ -263,4 +265,8 @@ with gr.Blocks(delete_cache=(600, 600)) as demo:
 if __name__ == "__main__":
     pipeline = TrellisTextTo3DPipeline.from_pretrained("microsoft/TRELLIS-text-xlarge")
     pipeline.cuda()
-    demo.launch()
+    demo.launch(
+        server_name=os.environ.get('GRADIO_SERVER_NAME', '0.0.0.0'),
+        server_port=int(os.environ.get('GRADIO_SERVER_PORT', '7860')),
+        share=os.environ.get('GRADIO_SHARE', 'false').lower() == 'true'
+    )
