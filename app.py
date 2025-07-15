@@ -14,8 +14,6 @@ from trellis.representations import Gaussian, MeshExtractResult
 from trellis.utils import render_utils, postprocessing_utils
 
 
-
-
 MAX_SEED = np.iinfo(np.int32).max
 TMP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tmp')
 os.makedirs(TMP_DIR, exist_ok=True)

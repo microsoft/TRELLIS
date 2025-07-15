@@ -16,9 +16,6 @@ These are handled directly in `app.py` and `app_text.py`:
 ## Usage
 
 ```bash
-# Basic usage with defaults
-python3 app.py
-
 # Custom configuration
 export GRADIO_SERVER_NAME=0.0.0.0
 export GRADIO_SERVER_PORT=8080
