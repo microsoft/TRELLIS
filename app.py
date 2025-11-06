@@ -400,4 +400,4 @@ with gr.Blocks(delete_cache=(600, 600)) as demo:
 if __name__ == "__main__":
     pipeline = TrellisImageTo3DPipeline.from_pretrained("microsoft/TRELLIS-image-large")
     pipeline.cuda()
-    demo.launch()
+    demo.launch(server_name="0.0.0.0")
