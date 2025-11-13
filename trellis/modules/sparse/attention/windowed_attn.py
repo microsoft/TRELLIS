@@ -119,7 +119,7 @@ def sparse_windowed_scaled_dot_product_self_attention(
             q = q.unsqueeze(0)                                      # [1, M, H, C]
             k = k.unsqueeze(0)                                      # [1, M, H, C]
             v = v.unsqueeze(0)                                      # [1, M, H, C]
-            mask = xops.fmha.BlockDiagonalMask.from_seqlens(seq_lens)
+            mask = xops.fmha.attn_bias.BlockDiagonalMask.from_seqlens(seq_lens)
             out = xops.memory_efficient_attention(q, k, v, mask)[0] # [M, H, C]
         elif ATTN == 'flash_attn':
             cu_seqlens = torch.cat([torch.tensor([0]), torch.cumsum(torch.tensor(seq_lens), dim=0)], dim=0) \
