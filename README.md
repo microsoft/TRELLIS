@@ -1,3 +1,5 @@
+# This is a fork of the TRELLIS project. I do not own any of this codebase or copyright. A novel http API was implement in flaskserver.py
+
 <img src="assets/logo.webp" width="100%" align="center">
 <h1 align="center">Structured 3D Latents<br>for Scalable and Versatile 3D Generation</h1>
 <p align="center"><a href="https://arxiv.org/abs/2412.01506"><img src='https://img.shields.io/badge/arXiv-Paper-red?logo=arxiv&logoColor=white' alt='arXiv'></a>
