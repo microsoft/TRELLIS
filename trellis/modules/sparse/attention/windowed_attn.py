@@ -8,6 +8,8 @@ if ATTN == 'xformers':
     import xformers.ops as xops
 elif ATTN == 'flash_attn':
     import flash_attn
+elif ATTN == 'sdpa':
+    import torch.nn.functional as F
 else:
     raise ValueError(f"Unknown attention module: {ATTN}")
 
@@ -110,6 +112,13 @@ def sparse_windowed_scaled_dot_product_self_attention(
             out = xops.memory_efficient_attention(q, k, v)          # [B, N, H, C]
         elif ATTN == 'flash_attn':
             out = flash_attn.flash_attn_qkvpacked_func(qkv_feats)   # [B, N, H, C]
+        elif ATTN == 'sdpa':
+            q, k, v = qkv_feats.unbind(dim=2)                       # [B, N, H, C]
+            q = q.permute(0, 2, 1, 3)                               # [B, H, N, C]
+            k = k.permute(0, 2, 1, 3)                               # [B, H, N, C]
+            v = v.permute(0, 2, 1, 3)                               # [B, H, N, C]
+            out = F.scaled_dot_product_attention(q, k, v)           # [B, H, N, C]
+            out = out.permute(0, 2, 1, 3)                           # [B, N, H, C]
         else:
             raise ValueError(f"Unknown attention module: {ATTN}")
         out = out.reshape(B * N, H, C)                              # [M, H, C]
@@ -125,6 +134,22 @@ def sparse_windowed_scaled_dot_product_self_attention(
             cu_seqlens = torch.cat([torch.tensor([0]), torch.cumsum(torch.tensor(seq_lens), dim=0)], dim=0) \
                         .to(qkv.device).int()
             out = flash_attn.flash_attn_varlen_qkvpacked_func(qkv_feats, cu_seqlens, max(seq_lens)) # [M, H, C]
+        elif ATTN == 'sdpa':
+            # Per-window SDPA: ragged window sizes, no varlen SDPA kernel, so
+            # attend within each window separately. Backend-agnostic (any GPU).
+            starts = torch.tensor([0] + list(seq_lens), device=qkv.device).cumsum(0).tolist()
+            outs = []
+            for i in range(len(seq_lens)):
+                seg = qkv_feats[starts[i]:starts[i + 1]]            # [Si, 3, H, C]
+                qi, ki, vi = seg.unbind(dim=1)                      # each [Si, H, C]
+                qi = qi.transpose(0, 1).unsqueeze(0)               # [1, H, Si, C]
+                ki = ki.transpose(0, 1).unsqueeze(0)
+                vi = vi.transpose(0, 1).unsqueeze(0)
+                oi = F.scaled_dot_product_attention(qi, ki, vi)   # [1, H, Si, C]
+                outs.append(oi.squeeze(0).transpose(0, 1))         # [Si, H, C]
+            out = torch.cat(outs, dim=0)                           # [M, H, C]
+        else:
+            raise ValueError(f"Unknown attention module: {ATTN}")
 
     out = out[bwd_indices]      # [T, H, C]
 

@@ -7,6 +7,8 @@ if ATTN == 'xformers':
     import xformers.ops as xops
 elif ATTN == 'flash_attn':
     import flash_attn
+elif ATTN == 'sdpa':
+    import torch.nn.functional as F
 else:
     raise ValueError(f"Unknown attention module: {ATTN}")
 
@@ -206,6 +208,26 @@ def sparse_scaled_dot_product_attention(*args, **kwargs):
             out = flash_attn.flash_attn_varlen_kvpacked_func(q, kv, cu_seqlens_q, cu_seqlens_kv, max(q_seqlen), max(kv_seqlen))
         elif num_all_args == 3:
             out = flash_attn.flash_attn_varlen_func(q, k, v, cu_seqlens_q, cu_seqlens_kv, max(q_seqlen), max(kv_seqlen))
+    elif ATTN == 'sdpa':
+        # Backend-agnostic fallback (any GPU: CUDA / ROCm / Intel / CPU). The
+        # packed tensors hold several variable-length sequences concatenated on
+        # dim 0; torch SDPA has no varlen entry point, so run one attention per
+        # sequence. At inference batch size is usually 1 -> a single SDPA call.
+        if num_all_args == 1:
+            q, k, v = qkv.unbind(dim=1)     # each [T, H, C]
+        elif num_all_args == 2:
+            k, v = kv.unbind(dim=1)         # each [T_KV, H, C]
+        # num_all_args == 3: q, k, v already [T, H, C]
+        q_starts = torch.tensor([0] + q_seqlen, device=device).cumsum(0).tolist()
+        kv_starts = torch.tensor([0] + kv_seqlen, device=device).cumsum(0).tolist()
+        outs = []
+        for i in range(len(q_seqlen)):
+            qi = q[q_starts[i]:q_starts[i + 1]].transpose(0, 1).unsqueeze(0)    # [1, H, Sq, C]
+            ki = k[kv_starts[i]:kv_starts[i + 1]].transpose(0, 1).unsqueeze(0)  # [1, H, Skv, C]
+            vi = v[kv_starts[i]:kv_starts[i + 1]].transpose(0, 1).unsqueeze(0)  # [1, H, Skv, C]
+            oi = F.scaled_dot_product_attention(qi, ki, vi)                     # [1, H, Sq, C]
+            outs.append(oi.squeeze(0).transpose(0, 1))                          # [Sq, H, C]
+        out = torch.cat(outs, dim=0)        # [T_Q, H, C]
     else:
         raise ValueError(f"Unknown attention module: {ATTN}")
     
