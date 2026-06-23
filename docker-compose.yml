@@ -1,0 +1,26 @@
+services:
+  trellis:
+    build: .
+    image: trellis
+    ports:
+      - "7860:7860"
+    volumes:
+      # Persist downloaded HF model weights between runs (several GB).
+      - ./.hf_cache:/app/.hf_cache
+      # Persist demo outputs.
+      - ./tmp:/app/tmp
+    environment:
+      ATTN_BACKEND: xformers
+      SPCONV_ALGO: native
+      PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
+      GRADIO_SERVER_NAME: 0.0.0.0
+      # Pin to GPU 1 (less busy in your nvidia-smi); change/remove to use both.
+      CUDA_VISIBLE_DEVICES: "1"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    # For text-to-3D (smaller models) override: command: python app_text.py
