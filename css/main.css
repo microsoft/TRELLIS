@@ -439,6 +439,14 @@ video {
     font-size: 20px;
 }
 
+#links #foundry::before {
+    content: "";
+    width: 20px;
+    height: 20px;
+    flex: 0 0 20px;
+    background: url("../icons/foundry.svg") center / contain no-repeat;
+}
+
 #teaser {
     margin-top: 32px;
     display: flex;
