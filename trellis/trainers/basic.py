@@ -15,6 +15,16 @@ from ..utils.dist_utils import *
 from ..utils import grad_clip_utils, elastic_utils
 
 
+def load_finetune_checkpoint(path, device):
+    """Load a finetuning state dict from a PyTorch or safetensors file."""
+    data = read_file_dist(path)
+    if str(path).lower().endswith('.safetensors'):
+        from safetensors.torch import load
+
+        return load(data.getvalue())
+    return torch.load(data, map_location=device, weights_only=True)
+
+
 class BasicTrainer(Trainer):
     """
     Trainer for basic training loop.
@@ -40,6 +50,7 @@ class BasicTrainer(Trainer):
             - 'amp': Automatic mixed precision.
         fp16_scale_growth (float): Scale growth for FP16 gradient backpropagation.
         finetune_ckpt (dict): Finetune checkpoint.
+        num_workers (int): Number of data-loader workers per training process.
         log_param_stats (bool): Log parameter stats.
         i_print (int): Print interval.
         i_log (int): Log interval.
@@ -271,7 +282,7 @@ class BasicTrainer(Trainer):
         for name, model in self.models.items():
             model_state_dict = model.state_dict()
             if name in finetune_ckpt:
-                model_ckpt = torch.load(read_file_dist(finetune_ckpt[name]), map_location=self.device, weights_only=True)
+                model_ckpt = load_finetune_checkpoint(finetune_ckpt[name], self.device)
                 for k, v in model_ckpt.items():
                     if model_ckpt[k].shape != model_state_dict[k].shape:
                         if self.is_master:

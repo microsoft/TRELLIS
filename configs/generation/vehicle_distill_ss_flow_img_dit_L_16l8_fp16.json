@@ -1,0 +1,77 @@
+{
+    "models": {
+        "denoiser": {
+            "name": "SparseStructureFlowModel",
+            "args": {
+                "resolution": 16,
+                "in_channels": 8,
+                "out_channels": 8,
+                "model_channels": 1024,
+                "cond_channels": 1024,
+                "num_blocks": 24,
+                "num_heads": 16,
+                "mlp_ratio": 4,
+                "patch_size": 1,
+                "pe_mode": "ape",
+                "qk_rms_norm": true,
+                "use_fp16": true,
+                "use_checkpoint": true
+            }
+        }
+    },
+    "dataset": {
+        "name": "ImageConditionedSparseStructureLatent",
+        "args": {
+            "latent_model": "ss_enc_conv3d_16l8_fp16",
+            "min_aesthetic_score": 4.5,
+            "image_size": 518,
+            "alpha_threshold": 0.8,
+            "pretrained_ss_dec": "/cluster/home/liaolw/code/origin_TRELLIS/zzj_ckpts/TRELLIS-image-large/ckpts/ss_dec_conv3d_16l8_fp16"
+        }
+    },
+    "trainer": {
+        "name": "ImageConditionedFlowMatchingCFGTrainer",
+        "args": {
+            "max_steps": 20000,
+            "batch_size_per_gpu": 1,
+            "batch_split": 1,
+            "num_workers": 4,
+            "optimizer": {
+                "name": "AdamW",
+                "args": {
+                    "lr": 0.00001,
+                    "weight_decay": 0.0
+                }
+            },
+            "ema_rate": [
+                0.9999
+            ],
+            "fp16_mode": "inflat_all",
+            "fp16_scale_growth": 0.001,
+            "finetune_ckpt": {
+                "denoiser": "/cluster/home/liaolw/code/origin_TRELLIS/zzj_ckpts/TRELLIS-image-large/ckpts/ss_flow_img_dit_L_16l8_fp16.safetensors"
+            },
+            "grad_clip": {
+                "name": "AdaptiveGradClipper",
+                "args": {
+                    "max_norm": 1.0,
+                    "clip_percentile": 95
+                }
+            },
+            "i_print": 100,
+            "i_log": 100,
+            "i_sample": 5000,
+            "i_save": 2000,
+            "p_uncond": 0.1,
+            "t_schedule": {
+                "name": "logitNormal",
+                "args": {
+                    "mean": 1.0,
+                    "std": 1.0
+                }
+            },
+            "sigma_min": 0.00001,
+            "image_cond_model": "dinov2_vitl14_reg"
+        }
+    }
+}

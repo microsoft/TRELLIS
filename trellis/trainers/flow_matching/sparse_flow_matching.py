@@ -57,6 +57,9 @@ class SparseFlowMatchingTrainer(FlowMatchingTrainer):
         """
         Prepare dataloader.
         """
+        num_workers = self.num_workers
+        if num_workers is None:
+            num_workers = int(np.ceil(os.cpu_count() / torch.cuda.device_count()))
         self.data_sampler = BalancedResumableSampler(
             self.dataset,
             shuffle=True,
@@ -65,10 +68,10 @@ class SparseFlowMatchingTrainer(FlowMatchingTrainer):
         self.dataloader = DataLoader(
             self.dataset,
             batch_size=self.batch_size_per_gpu,
-            num_workers=int(np.ceil(os.cpu_count() / torch.cuda.device_count())),
+            num_workers=num_workers,
             pin_memory=True,
             drop_last=True,
-            persistent_workers=True,
+            persistent_workers=num_workers > 0,
             collate_fn=functools.partial(self.dataset.collate_fn, split_size=self.batch_split),
             sampler=self.data_sampler,
         )

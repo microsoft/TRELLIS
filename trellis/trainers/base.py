@@ -41,6 +41,7 @@ class Trainer:
         finetune_ckpt=None,
         log_param_stats=False,
         prefetch_data=True,
+        num_workers=None,
         i_print=1000,
         i_log=500,
         i_sample=10000,
@@ -63,6 +64,7 @@ class Trainer:
         self.fp16_scale_growth = fp16_scale_growth
         self.log_param_stats = log_param_stats
         self.prefetch_data = prefetch_data
+        self.num_workers = num_workers
         if self.prefetch_data:
             self._data_prefetched = None
 
@@ -131,6 +133,9 @@ class Trainer:
         """
         Prepare dataloader.
         """
+        num_workers = self.num_workers
+        if num_workers is None:
+            num_workers = int(np.ceil(os.cpu_count() / torch.cuda.device_count()))
         self.data_sampler = ResumableSampler(
             self.dataset,
             shuffle=True,
@@ -138,10 +143,10 @@ class Trainer:
         self.dataloader = DataLoader(
             self.dataset,
             batch_size=self.batch_size_per_gpu,
-            num_workers=int(np.ceil(os.cpu_count() / torch.cuda.device_count())),
+            num_workers=num_workers,
             pin_memory=True,
             drop_last=True,
-            persistent_workers=True,
+            persistent_workers=num_workers > 0,
             collate_fn=self.dataset.collate_fn if hasattr(self.dataset, 'collate_fn') else None,
             sampler=self.data_sampler,
         )
@@ -448,4 +453,3 @@ class Trainer:
             for _ in range(wait + warmup + active):
                 self.run_step()
                 prof.step()
-            

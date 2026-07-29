@@ -90,8 +90,9 @@ class TextConditionedMixin:
     
     
 class ImageConditionedMixin:
-    def __init__(self, roots, *, image_size=518, **kwargs):
+    def __init__(self, roots, *, image_size=518, alpha_threshold=0.0, **kwargs):
         self.image_size = image_size
+        self.alpha_threshold = alpha_threshold
         super().__init__(roots, **kwargs)
     
     def filter_metadata(self, metadata):
@@ -111,10 +112,13 @@ class ImageConditionedMixin:
         metadata = metadata['frames'][view]
 
         image_path = os.path.join(image_root, metadata['file_path'])
-        image = Image.open(image_path)
+        with Image.open(image_path) as source_image:
+            image = source_image.convert('RGBA')
 
-        alpha = np.array(image.getchannel(3))
-        bbox = np.array(alpha).nonzero()
+        alpha = np.array(image.getchannel('A'))
+        bbox = (alpha > float(self.alpha_threshold) * 255).nonzero()
+        if len(bbox[0]) == 0:
+            raise ValueError(f'Condition image has no alpha above threshold {self.alpha_threshold}: {image_path}')
         bbox = [bbox[1].min(), bbox[0].min(), bbox[1].max(), bbox[0].max()]
         center = [(bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2]
         hsize = max(bbox[2] - bbox[0], bbox[3] - bbox[1]) / 2
@@ -126,12 +130,11 @@ class ImageConditionedMixin:
         image = image.crop(aug_bbox)
 
         image = image.resize((self.image_size, self.image_size), Image.Resampling.LANCZOS)
-        alpha = image.getchannel(3)
+        alpha = image.getchannel('A')
         image = image.convert('RGB')
         image = torch.tensor(np.array(image)).permute(2, 0, 1).float() / 255.0
         alpha = torch.tensor(np.array(alpha)).float() / 255.0
         image = image * alpha.unsqueeze(0)
         pack['cond'] = image
-       
+
         return pack
-    

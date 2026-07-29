@@ -164,7 +164,8 @@ class TrellisImageTo3DPipeline(Pipeline):
         cond: dict,
         num_samples: int = 1,
         sampler_params: dict = {},
-    ) -> torch.Tensor:
+        return_latent: bool = False,
+    ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         """
         Sample sparse structures with the given conditioning.
         
@@ -172,6 +173,8 @@ class TrellisImageTo3DPipeline(Pipeline):
             cond (dict): The conditioning information.
             num_samples (int): The number of samples to generate.
             sampler_params (dict): Additional parameters for the sampler.
+            return_latent (bool): Whether to also return the sampled sparse
+                structure latent before VAE decoding.
         """
         # Sample occupancy latent
         flow_model = self.models['sparse_structure_flow_model']
@@ -190,6 +193,8 @@ class TrellisImageTo3DPipeline(Pipeline):
         decoder = self.models['sparse_structure_decoder']
         coords = torch.argwhere(decoder(z_s)>0)[:, [0, 2, 3, 4]].int()
 
+        if return_latent:
+            return coords, z_s
         return coords
 
     def decode_slat(
@@ -350,6 +355,7 @@ class TrellisImageTo3DPipeline(Pipeline):
         formats: List[str] = ['mesh', 'gaussian', 'radiance_field'],
         preprocess_image: bool = True,
         mode: Literal['stochastic', 'multidiffusion'] = 'stochastic',
+        return_intermediates: bool = False,
     ) -> dict:
         """
         Run the pipeline with multiple images as condition
@@ -360,6 +366,8 @@ class TrellisImageTo3DPipeline(Pipeline):
             sparse_structure_sampler_params (dict): Additional parameters for the sparse structure sampler.
             slat_sampler_params (dict): Additional parameters for the structured latent sampler.
             preprocess_image (bool): Whether to preprocess the image.
+            return_intermediates (bool): Whether to return the sparse
+                structure latent, voxel coordinates, and denormalized SLat.
         """
         if preprocess_image:
             images = [self.preprocess_image(image) for image in images]
@@ -368,8 +376,24 @@ class TrellisImageTo3DPipeline(Pipeline):
         torch.manual_seed(seed)
         ss_steps = {**self.sparse_structure_sampler_params, **sparse_structure_sampler_params}.get('steps')
         with self.inject_sampler_multi_image('sparse_structure_sampler', len(images), ss_steps, mode=mode):
-            coords = self.sample_sparse_structure(cond, num_samples, sparse_structure_sampler_params)
+            sparse_result = self.sample_sparse_structure(
+                cond,
+                num_samples,
+                sparse_structure_sampler_params,
+                return_latent=return_intermediates,
+            )
+        if return_intermediates:
+            coords, sparse_structure_latent = sparse_result
+        else:
+            coords = sparse_result
         slat_steps = {**self.slat_sampler_params, **slat_sampler_params}.get('steps')
         with self.inject_sampler_multi_image('slat_sampler', len(images), slat_steps, mode=mode):
             slat = self.sample_slat(cond, coords, slat_sampler_params)
-        return self.decode_slat(slat, formats)
+        outputs = self.decode_slat(slat, formats)
+        if return_intermediates:
+            outputs['_intermediates'] = {
+                'sparse_structure_latent': sparse_structure_latent,
+                'coords': coords,
+                'slat': slat,
+            }
+        return outputs
