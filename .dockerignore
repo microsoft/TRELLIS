@@ -1,0 +1,10 @@
+.git
+.venv
+__pycache__
+*.pyc
+tmp/
+outputs/
+.hf_cache/
+*.mp4
+*.glb
+*.ply
