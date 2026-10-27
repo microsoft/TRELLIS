@@ -52,7 +52,11 @@
     ```
 
 2. Install the dependencies:
-    
+
+   There are two ways of installing dependencies.
+
+    1. Using a script (Linux & Conda only)
+
     **Before running the following command there are somethings to note:**
     - By adding `--new-env`, a new conda environment named `trellis` will be created. If you want to use an existing conda environment, please remove this flag.
     - By default the `trellis` environment will use pytorch 2.4.0 with CUDA 11.8. If you want to use a different version of CUDA (e.g., if you have CUDA Toolkit 12.2 installed and do not want to install another 11.8 version for submodule compilation), you can remove the `--new-env` flag and manually install the required dependencies. Refer to [PyTorch](https://pytorch.org/get-started/previous-versions/) for the installation command.
@@ -82,6 +86,42 @@
         --nvdiffrast            Install nvdiffrast
         --demo                  Install all dependencies for demo
     ```
+
+    2. Using pip (Cross-platform & venv):
+
+    **Note:** Preinstall CUDA SDK 12.4 and Python 3.10, 3.11, or 3.12. These versions are crucial. Other combinations may cause issues and will be discussed later.
+
+    Steps:
+
+    - **Create a virtual environment in the `Venv` directory:**
+    ```sh
+    python -m v Venv
+    ```
+
+    - **Activate the virtual environment:**
+
+    On Windows,
+    ```cmd
+    Venv\Scripts\activate
+    ```
+    On non-Windows,
+    ```sh
+    source ./Venv/Scripts/activate
+    ```
+
+    - **Install package using pip:** This may take a while.
+    ```sh
+    pip install -r requirements.txt
+    ```
+
+    - **Install extra packages with dependencies on PyTorch:**
+    ```sh
+    pip install -r requirements_extra.txt
+    ```
+
+    **Known Issues**
+
+      1. The ROCm platform is not supported. Additional work may be necessary to resolve these issues.
 
 <!-- Pretrained Models -->
 ## 🤖 Pretrained Models
