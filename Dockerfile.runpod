@@ -1,0 +1,49 @@
+FROM runpod/base:0.6.2-cuda12.4.1
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y ffmpeg build-essential git python3-onnx rdfind && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy the application files
+COPY . .
+
+# Initialize and update git submodules
+RUN cd /app && \
+    git init && \
+    git submodule init && \
+    git submodule update --init --recursive && \
+    git submodule update --recursive && \
+    rm -rf .git */.git **/.git
+
+# Create a g++ wrapper for JIT compilation
+RUN printf '#!/usr/bin/env bash\nexec /usr/bin/g++ -I/usr/local/cuda/include -I/usr/local/cuda/include/crt "$@"\n' > /usr/local/bin/gxx-wrapper && \
+    chmod +x /usr/local/bin/gxx-wrapper
+ENV CXX=/usr/local/bin/gxx-wrapper
+
+# Install Python dependencies
+RUN python3.11 -m pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cu118
+RUN python3.11 -m pip install --no-cache-dir kaolin==0.17.0 -f https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.0.0_cu118.html
+RUN python3.11 -m pip install --no-cache-dir diso plyfile utils3d flash_attn xformers
+RUN python3.11 -m pip install --no-cache-dir git+https://github.com/NVlabs/nvdiffrast.git
+
+# Run setup script with necessary components
+RUN ./setup.sh --basic --xformers --flash-attn --diffoctreerast --vox2seq --spconv --mipgaussian --kaolin --nvdiffrast
+
+# Install RunPod
+RUN python3.11 -m pip install --no-cache-dir runpod
+
+# Cleanup unnecessary files
+RUN apt-get remove -y ffmpeg git python3-onnx && \
+    apt-get autoremove -y && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy and setup startup script
+COPY startup.runpod.sh /app/startup.sh
+RUN chmod +x /app/startup.sh
+
+# Use startup script as entrypoint
+ENTRYPOINT ["/app/startup.runpod.sh"] 
