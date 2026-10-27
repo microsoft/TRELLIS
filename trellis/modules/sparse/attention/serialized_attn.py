@@ -9,6 +9,12 @@ if ATTN == 'xformers':
     import xformers.ops as xops
 elif ATTN == 'flash_attn':
     import flash_attn
+elif ATTN == 'sdpa':
+    # Serialized (space-filling-curve) attention is not on the image->mesh
+    # inference path, so this module only needs to import cleanly under the
+    # backend-agnostic SDPA backend; calling the serialized function with
+    # sdpa would still require vox2seq for the ordering.
+    import torch.nn.functional as F
 else:
     raise ValueError(f"Unknown attention module: {ATTN}")
 
