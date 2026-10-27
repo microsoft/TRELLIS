@@ -37,7 +37,7 @@
 ## 📦 Installation
 
 ### Prerequisites
-- **System**: The code is currently tested only on **Linux**.  For windows setup, you may refer to [#3](https://github.com/microsoft/TRELLIS/issues/3) (not fully tested).
+- **System**: The code is currently tested only on **Linux**.  For windows setup, you may refer to [#3](https://github.com/microsoft/TRELLIS/issues/3) (not fully tested). For **Apple Silicon Macs (no CUDA/Linux)**, see the community port [trellis-mac-mps](https://github.com/vinayapathak/trellis-mac-mps) — every CUDA-only extension replaced with a native PyTorch/MPS or hand-written Metal equivalent, plus benchmarked kernel-, algorithm-, and architecture-level optimization results; addresses [#154](https://github.com/microsoft/TRELLIS/issues/154), [#96](https://github.com/microsoft/TRELLIS/issues/96), [#51](https://github.com/microsoft/TRELLIS/issues/51), [#303](https://github.com/microsoft/TRELLIS/issues/303).
 - **Hardware**: An NVIDIA GPU with at least 16GB of memory is necessary. The code has been verified on NVIDIA A100 and A6000 GPUs.  
 - **Software**:   
   - The [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit-archive) is needed to compile certain submodules. The code has been tested with CUDA versions 11.8 and 12.2.  
