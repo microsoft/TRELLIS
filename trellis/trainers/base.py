@@ -230,7 +230,7 @@ class Trainer:
 
         # Assign tasks
         num_samples_per_process = int(np.ceil(num_samples / self.world_size))
-        samples = self.run_snapshot(num_samples_per_process, batch_size=batch_size, verbose=verbose)
+        samples = self.run_snapshot(num_samples_per_process, batch_size=self.batch_size_per_gpu, verbose=verbose)
 
         # Preprocess images
         for key in list(samples.keys()):
