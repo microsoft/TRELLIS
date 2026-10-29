@@ -2,6 +2,41 @@ import torch
 from ...modules.sparse import SparseTensor
 from easydict import EasyDict as edict
 from .utils_cube import *
+
+
+def _ensure_kaolin_check_tensor():
+    """FlexiCubes imports ``kaolin.utils.testing.check_tensor``, but only uses it for input
+    shape assertions. kaolin has no wheels for some platforms (e.g. Windows), so register a
+    minimal stand-in module when the real package is not installed."""
+    try:
+        import kaolin.utils.testing  # noqa: F401
+        return
+    except ImportError:
+        pass
+    import sys
+    import types
+
+    def check_tensor(tensor, shape=None, dtype=None, device=None, throw=True):
+        ok = True
+        if shape is not None:
+            ok = len(shape) == tensor.ndim and all(d is None or d == tensor.shape[i] for i, d in enumerate(shape))
+        if ok and dtype is not None:
+            ok = tensor.dtype == dtype
+        if ok and device is not None:
+            ok = tensor.device.type == str(device).split(':')[0]
+        if not ok and throw:
+            raise ValueError(f"tensor check failed: shape={tuple(tensor.shape)}, dtype={tensor.dtype}, "
+                             f"device={tensor.device} (expected shape={shape}, dtype={dtype}, device={device})")
+        return ok
+
+    testing = types.ModuleType('kaolin.utils.testing')
+    testing.check_tensor = check_tensor
+    sys.modules.setdefault('kaolin', types.ModuleType('kaolin'))
+    sys.modules.setdefault('kaolin.utils', types.ModuleType('kaolin.utils'))
+    sys.modules.setdefault('kaolin.utils.testing', testing)
+
+
+_ensure_kaolin_check_tensor()
 from .flexicubes.flexicubes import FlexiCubes
 
 
