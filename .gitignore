@@ -396,3 +396,6 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+
+# Generated 3D assets (default output folder of the example scripts)
+outputs/
