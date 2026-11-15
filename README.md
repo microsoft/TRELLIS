@@ -3,6 +3,7 @@
 <p align="center"><a href="https://arxiv.org/abs/2412.01506"><img src='https://img.shields.io/badge/arXiv-Paper-red?logo=arxiv&logoColor=white' alt='arXiv'></a>
 <a href='https://microsoft.github.io/TRELLIS/'><img src='https://img.shields.io/badge/Project_Page-Website-green?logo=googlechrome&logoColor=white' alt='Project Page'></a>
 <a href='https://huggingface.co/spaces/Microsoft/TRELLIS'><img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Live_Demo-blue'></a>
+<a href='https://cloud.swmgpu.com/w/samofvaani/hi3d-mesh-refiner-studio'><img src='https://img.shields.io/badge/swm%20cloud-ComfyUI%203D%20Workspaces-0A84FF?logo=icloud&logoColor=white' alt='swm cloud'></a>
 </p>
 <p align="center"><img src="assets/teaser.png" width="100%"></p>
 
@@ -35,6 +36,8 @@
 
 <!-- Installation -->
 ## 📦 Installation
+
+> **1-click cloud GPU (**swm cloud**):** Run TRELLIS.2 in ComfyUI with all weights and CUDA extensions pre-installed — [Hi3D 1.0 + TRELLIS.2 Ultra-High-Res 3D Mesh Studio](https://cloud.swmgpu.com/w/samofvaani/hi3d-mesh-refiner-studio) · [Image to 3D: Idol, TRELLIS.2 and Pixal3D](https://cloud.swmgpu.com/w/samofvaani/image-to-3d).
 
 ### Prerequisites
 - **System**: The code is currently tested only on **Linux**.  For windows setup, you may refer to [#3](https://github.com/microsoft/TRELLIS/issues/3) (not fully tested).
